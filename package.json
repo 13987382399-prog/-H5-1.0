@@ -18,6 +18,9 @@
   "engines": {
     "node": ">=14.0.0"
   },
+  "dependencies": {
+    "dotenv": "^16.6.1"
+  },
   "devDependencies": {
     "localtunnel": "^2.0.2"
   }

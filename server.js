@@ -2,9 +2,10 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config();
 
-const PORT = 8084;
-const DASHSCOPE_API_KEY = 'sk-ccd54aa1ffaa47c39cfc529f0228b378';
+const PORT = process.env.PORT || 8084;
+const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY;
 
 const server = http.createServer((req, res) => {
     // 处理 API 请求
