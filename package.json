@@ -17,5 +17,8 @@
   "license": "ISC",
   "engines": {
     "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "localtunnel": "^2.0.2"
   }
 }
