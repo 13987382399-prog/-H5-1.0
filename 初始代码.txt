@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文旅演示界面 | 昆明老街地图版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4eaf5 100%);
+        }
+
+        /* 手机模拟框 - 更真实的质感 */
+        .phone-container {
+            width: 320px;
+            height: 664px;
+            border: 12px solid #1a1a1a;
+            border-radius: 44px;
+            background: #fff; /* 纯白色背景 */
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.18), 
+                        0 2px 10px rgba(0,0,0,0.12);
+            /* 模拟手机顶部听筒 */
+            &::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 100px;
+                height: 20px;
+                background: #1a1a1a;
+                border-bottom-left-radius: 12px;
+                border-bottom-right-radius: 12px;
+            }
+        }
+
+        /* 屏幕内容区 - 移除所有背景相关内容 */
+        .screen-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            padding: 20px;
+            background: #ffffff; /* 纯白色背景 */
+            overflow: hidden;
+        }
+
+        /* 附近推荐滚动栏 - 背景透明度调整为90% */
+        .nearby-recommend {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+            z-index: 2;
+            background: rgba(255,255,255,0.9);
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        .recommend-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4a2680;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .recommend-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background: linear-gradient(135deg, #c299ff, #9d65ff);
+            border-radius: 2px;
+        }
+
+        /* 允许横向滚动并隐藏滚动条 */
+        .recommend-scroll {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            position: relative;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* 隐藏Chrome/Safari的滚动条 */
+        .recommend-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 自动滚动容器 */
+        .scroll-wrapper {
+            display: inline-block;
+            animation: scrollLeft 50s linear infinite;
+            user-select: none;
+        }
+
+        /* 自动滚动动画 */
+        @keyframes scrollLeft {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        /* 鼠标悬停/拖拽时暂停滚动 */
+        .recommend-scroll:hover .scroll-wrapper,
+        .recommend-scroll.dragging .scroll-wrapper {
+            animation-play-state: paused;
+        }
+
+        .recommend-item {
+            display: inline-block;
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-right: 10px;
+            box-shadow: 0 2px 8px rgba(179, 136, 255, 0.1);
+            border: 1px solid #f0e6ff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 140px;
+            user-select: none;
+        }
+
+        .recommend-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(179, 136, 255, 0.15);
+            border-color: #d4b4ff;
+            background: rgba(255,255,255,1);
+        }
+
+        /* 分类图标样式 */
+        .item-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 6px;
+            vertical-align: middle;
+            border-radius: 4px;
+            background-color: #f0e6ff;
+            color: #9d65ff;
+            text-align: center;
+            line-height: 20px;
+            font-size: 14px;
+            font-weight: normal;
+        }
+
+        .item-title {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .item-desc {
+            font-size: 12px;
+            color: #666;
+            padding-left: 26px;
+        }
+
+        /* AI伴游按钮 */
+        .ai-button {
+            position: absolute;
+            bottom: 200px;
+            right: 25px;
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #c299ff, #9d65ff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 6px 24px rgba(157, 101, 255, 0.35);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            
+            &:hover {
+                transform: scale(1.1) translateY(-4px) rotate(5deg);
+                box-shadow: 0 8px 30px rgba(157, 101, 255, 0.5);
+            }
+            
+            &:active {
+                transform: scale(1.05) rotate(2deg);
+            }
+            
+            .seagull-icon {
+                width: 60px;
+                height: 60px;
+                background-image: url('https://p3-flow-imagex-download-sign.byteimg.com/tos-cn-i-a9rns2rl98/1bc04e71b6ce446fa657fb04cf4b7e5e.png~tplv-a9rns2rl98-24:720:720.png?lk3s=8e244e95&rcl=20260219153037A536B57FB3DBE869A22A&rrcfp=8a172a1a&x-expires=1772091037&x-signature=tCBh1O1i0mVbvHg3fky1JIpBqHM%3D');
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                transition: transform 0.3s ease;
+            }
+            
+            &:hover .seagull-icon {
+                transform: scale(1.1);
+            }
+        }
+
+        /* 功能按钮区 */
+        .function-buttons {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            z-index: 1;
+        }
+
+        /* 功能按钮 */
+        .func-btn {
+            padding: 14px 0;
+            background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(248,240,255,0.9));
+            border: 1px solid #e8dfff;
+            border-radius: 28px;
+            text-align: center;
+            color: #663399;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 -2px 6px rgba(255, 255, 255, 0.8) inset,
+                0 2px 4px rgba(179, 136, 255, 0.1) inset,
+                0 8px 12px rgba(179, 136, 255, 0.12),
+                0 3px 6px rgba(120, 80, 180, 0.08);
+            
+            &:hover {
+                background: linear-gradient(145deg, rgba(240,230,255,0.95), rgba(232,223,255,0.95));
+                color: #4a2680;
+                transform: translateY(-5px) scale(1.02);
+                box-shadow: 
+                    0 -2px 8px rgba(255, 255, 255, 0.9) inset,
+                    0 3px 6px rgba(179, 136, 255, 0.15) inset,
+                    0 12px 20px rgba(179, 136, 255, 0.2),
+                    0 5px 10px rgba(120, 80, 180, 0.1);
+            }
+            
+            &:active {
+                transform: translateY(-2px) scale(0.98);
+                box-shadow: 
+                    0 2px 6px rgba(179, 136, 255, 0.1) inset,
+                    0 4px 8px rgba(179, 136, 255, 0.15);
+                background: linear-gradient(145deg, rgba(232,223,255,0.95), rgba(240,230,255,0.95));
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(0.95);
+                opacity: 1;
+            }
+        }
+        
+        /* 定位请求提示框样式 - 缩小40% (原300px → 180px) */
+        .location-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 16.8px 14.4px; /* 同步缩小内边距40% */
+            border-radius: 12px; /* 同步缩小圆角40% */
+            box-shadow: 0 6px 24px rgba(0,0,0,0.25); /* 同步缩小阴影40% */
+            width: 180px; /* 原300px → 缩小40% = 180px */
+            z-index: 9999;
+            text-align: center;
+            font-size: 9px; /* 同步缩小字体40% */
+            color: #333;
+            border: 1px solid #f0e6ff;
+        }
+        
+        .location-icon {
+            font-size: 19.2px; /* 同步缩小40% */
+            color: #9d65ff;
+            margin-bottom: 9.6px; /* 同步缩小40% */
+            display: block;
+        }
+        
+        .location-title {
+            font-size: 10.8px; /* 同步缩小40% */
+            font-weight: 600;
+            color: #4a2680;
+            margin-bottom: 7.2px; /* 同步缩小40% */
+        }
+        
+        .location-desc {
+            font-size: 8.4px; /* 同步缩小40% */
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 14.4px; /* 同步缩小40% */
+            text-align: left; /* 新增：文本左对齐 */
+        }
+        
+        .location-buttons {
+            display: flex;
+            gap: 7.2px; /* 同步缩小40% */
+            justify-content: center;
+        }
+        
+        .location-btn {
+            padding: 6px 12px; /* 同步缩小40% */
+            border-radius: 14.4px; /* 同步缩小40% */
+            font-size: 8.4px; /* 同步缩小40% */
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex: 1;
+            border: none;
+        }
+        
+        .location-btn.allow {
+            background: linear-gradient(135deg, #9d65ff, #c299ff);
+            color: white;
+        }
+        
+        .location-btn.allow:hover {
+            background: linear-gradient(135deg, #8a54e0, #b588e6);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(157, 101, 255, 0.3);
+        }
+        
+        .location-btn.deny {
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #eee;
+        }
+        
+        .location-btn.deny:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        /* 遮罩层 */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9998;
+            backdrop-filter: blur(2px);
+        }
+
+        /* 手动选择定位界面样式 */
+        .manual-location-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            width: 280px;
+            z-index: 9999;
+            text-align: center;
+        }
+        
+        .manual-location-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4a2680;
+            margin-bottom: 16px;
+        }
+        
+        .city-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+        
+        .city-item {
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: background 0.2s ease;
+        }
+        
+        .city-item:hover {
+            background: #f0e6ff;
+        }
+        
+        .confirm-city-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #9d65ff, #c299ff);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="screen-content">
+            <!-- 附近推荐滚动栏 -->
+            <div class="nearby-recommend">
+                <div class="recommend-title">附近推荐</div>
+                <div class="recommend-scroll" id="recommend-scroll">
+                    <!-- 自动滚动容器 -->
+                    <div class="scroll-wrapper">
+                        <!-- 剧本游分类 -->
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🎭</span>民国往事剧本游
+                            </div>
+                            <div class="item-desc">昆明老街 沉浸式体验</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🎭</span>大理武侠剧本游
+                            </div>
+                            <div class="item-desc">大理古城 古风换装</div>
+                        </div>
+                        
+                        <!-- 美食分类 -->
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🍜</span>官渡古镇小吃
+                            </div>
+                            <div class="item-desc">手工饵块 必尝推荐</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🍜</span>建水汽锅鸡
+                            </div>
+                            <div class="item-desc">非遗美食 现点现做</div>
+                        </div>
+                        
+                        <!-- 拍照分类 -->
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">📸</span>金马碧鸡坊拍照
+                            </div>
+                            <div class="item-desc">夜景拍摄 最佳19:00</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">📸</span>滇池海鸥打卡
+                            </div>
+                            <div class="item-desc">喂鸥拍照 道具免费</div>
+                        </div>
+                        
+                        <!-- 表演分类 -->
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🎪</span>民族村彝族打跳
+                            </div>
+                            <div class="item-desc">14:00 主舞台表演</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🎪</span>丽江纳西古乐
+                            </div>
+                            <div class="item-desc">20:00 四方街演出</div>
+                        </div>
+                        
+                        <!-- 快闪分类 -->
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">⚡</span>南屏街快闪
+                            </div>
+                            <div class="item-desc">16:00 民族舞快闪</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">⚡</span>星光夜市快闪
+                            </div>
+                            <div class="item-desc">19:30 傣迪互动</div>
+                        </div>
+                        
+                        <!-- 线路分类 -->
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🗺️</span>滇池环湖线路
+                            </div>
+                            <div class="item-desc">骑行/步行 2小时</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🗺️</span>茶马古道线路
+                            </div>
+                            <div class="item-desc">徒步体验 含讲解</div>
+                        </div>
+
+                        <!-- 复制一份内容，实现无缝滚动衔接 -->
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🎭</span>民国往事剧本游
+                            </div>
+                            <div class="item-desc">昆明老街 沉浸式体验</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🎭</span>大理武侠剧本游
+                            </div>
+                            <div class="item-desc">大理古城 古风换装</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🍜</span>官渡古镇小吃
+                            </div>
+                            <div class="item-desc">手工饵块 必尝推荐</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🍜</span>建水汽锅鸡
+                            </div>
+                            <div class="item-desc">非遗美食 现点现做</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">📸</span>金马碧鸡坊拍照
+                            </div>
+                            <div class="item-desc">夜景拍摄 最佳19:00</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">📸</span>滇池海鸥打卡
+                            </div>
+                            <div class="item-desc">喂鸥拍照 道具免费</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🎪</span>民族村彝族打跳
+                            </div>
+                            <div class="item-desc">14:00 主舞台表演</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🎪</span>丽江纳西古乐
+                            </div>
+                            <div class="item-desc">20:00 四方街演出</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">⚡</span>南屏街快闪
+                            </div>
+                            <div class="item-desc">16:00 民族舞快闪</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">⚡</span>星光夜市快闪
+                            </div>
+                            <div class="item-desc">19:30 傣迪互动</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🗺️</span>滇池环湖线路
+                            </div>
+                            <div class="item-desc">骑行/步行 2小时</div>
+                        </div>
+                        <div class="recommend-item">
+                            <div class="item-title">
+                                <span class="item-icon">🗺️</span>茶马古道线路
+                            </div>
+                            <div class="item-desc">徒步体验 含讲解</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI伴游按钮 -->
+            <div class="ai-button" id="ai-btn">
+                <div class="seagull-icon"></div>
+            </div>
+
+            <!-- 功能按钮组 -->
+            <div class="function-buttons">
+                <div class="func-btn">热门剧本</div>
+                <div class="func-btn">快闪活动</div>
+                <div class="func-btn">非遗手工</div>
+                <div class="func-btn">打跳聚点</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载完成后立即显示定位请求提示
+        window.addEventListener('DOMContentLoaded', function() {
+            // 创建遮罩层
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            document.body.appendChild(overlay);
+            
+            // 创建定位请求弹窗
+            const locationModal = document.createElement('div');
+            locationModal.className = 'location-modal';
+            locationModal.innerHTML = `
+                <span class="location-icon">📍</span>
+                <div class="location-title">获取定位</div>
+                <div class="location-desc">功能均基于定位实现，开启位置权限体验更佳</div>
+                <div class="location-buttons">
+                    <button class="location-btn deny">暂不允许</button>
+                    <button class="location-btn allow">允许</button>
+                </div>
+            `;
+            document.body.appendChild(locationModal);
+            
+            // 按钮点击事件
+            const denyBtn = locationModal.querySelector('.deny');
+            const allowBtn = locationModal.querySelector('.allow');
+            
+            // 关闭弹窗的通用函数
+            function closeModal() {
+                if (document.body.contains(locationModal)) {
+                    document.body.removeChild(locationModal);
+                }
+                if (document.body.contains(overlay)) {
+                    document.body.removeChild(overlay);
+                }
+            }
+            
+            // 暂不允许 - 打开手动选择定位界面
+            denyBtn.addEventListener('click', function() {
+                closeModal();
+                showManualLocationModal();
+            });
+            
+            // 允许定位
+            allowBtn.addEventListener('click', function() {
+                closeModal();
+                // 调用浏览器的定位API
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        // 定位成功
+                        function(position) {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+                            showToast('定位成功，正在为你推荐附近内容');
+                            // 这里可以添加根据经纬度获取具体位置并更新推荐内容的逻辑
+                            console.log('定位成功：', '纬度', lat, '经度', lng);
+                        },
+                        // 定位失败
+                        function(error) {
+                            let errorMsg = '';
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMsg = '你拒绝了定位请求';
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    errorMsg = '位置信息不可用';
+                                    break;
+                                case error.TIMEOUT:
+                                    errorMsg = '定位请求超时';
+                                    break;
+                                case error.UNKNOWN_ERROR:
+                                    errorMsg = '未知错误';
+                                    break;
+                            }
+                            showToast(errorMsg + '，请手动选择定位');
+                            // 定位失败时也打开手动选择界面
+                            showManualLocationModal();
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 0
+                        }
+                    );
+                } else {
+                    // 浏览器不支持定位
+                    showToast('你的浏览器不支持定位功能，请手动选择定位');
+                    showManualLocationModal();
+                }
+            });
+        });
+        
+        // 显示手动选择定位界面
+        function showManualLocationModal() {
+            // 创建遮罩层
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            document.body.appendChild(overlay);
+            
+            // 创建手动选择定位弹窗
+            const manualModal = document.createElement('div');
+            manualModal.className = 'manual-location-modal';
+            manualModal.innerHTML = `
+                <div class="manual-location-title">手动选择定位</div>
+                <div class="city-list">
+                    <div class="city-item" data-city="昆明">昆明</div>
+                    <div class="city-item" data-city="大理">大理</div>
+                    <div class="city-item" data-city="丽江">丽江</div>
+                    <div class="city-item" data-city="建水">建水</div>
+                    <div class="city-item" data-city="西双版纳">西双版纳</div>
+                </div>
+                <button class="confirm-city-btn">确认选择</button>
+            `;
+            document.body.appendChild(manualModal);
+            
+            // 城市选择逻辑
+            let selectedCity = '昆明'; // 默认选中昆明
+            const cityItems = manualModal.querySelectorAll('.city-item');
+            const confirmBtn = manualModal.querySelector('.confirm-city-btn');
+            
+            // 初始化默认选中样式
+            cityItems[0].style.background = '#f0e6ff';
+            cityItems[0].style.color = '#9d65ff';
+            
+            // 城市点击事件
+            cityItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 重置所有城市样式
+                    cityItems.forEach(i => {
+                        i.style.background = '';
+                        i.style.color = '';
+                    });
+                    // 设置当前选中样式
+                    this.style.background = '#f0e6ff';
+                    this.style.color = '#9d65ff';
+                    selectedCity = this.dataset.city;
+                });
+            });
+            
+            // 确认按钮点击事件
+            confirmBtn.addEventListener('click', function() {
+                document.body.removeChild(manualModal);
+                document.body.removeChild(overlay);
+                showToast(`已选择${selectedCity}作为定位城市`);
+                console.log('手动选择定位：', selectedCity);
+                // 这里可以添加根据选择的城市更新推荐内容的逻辑
+            });
+        }
+        
+        // 提示框函数
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0,0,0,0.7);
+                color: white;
+                padding: 10px 20px;
+                border-radius: 20px;
+                font-size: 14px;
+                z-index: 9999;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // 显示提示
+            setTimeout(() => {
+                toast.style.opacity = '1';
+            }, 10);
+            
+            // 3秒后隐藏
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // AI伴游按钮点击事件
+        document.getElementById('ai-btn').addEventListener('click', () => {
+            const alertBox = document.createElement('div');
+            alertBox.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 24px 20px;
+                border-radius: 16px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+                width: 280px;
+                z-index: 9999;
+                text-align: center;
+                font-size: 15px;
+                color: #333;
+            `;
+            alertBox.innerHTML = `
+                <div style="color: #9d65ff; font-size: 24px; margin-bottom: 12px;">🐦</div>
+                <div style="margin-bottom: 16px; line-height: 1.5;">海鸥伴游助手：你好呀～我可以为你讲解当地文化、推荐特色美食，需要什么帮助吗？</div>
+                <button style="
+                    padding: 8px 24px;
+                    background: #9d65ff;
+                    color: white;
+                    border: none;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    cursor: pointer;
+                ">知道啦</button>
+            `;
+            document.body.appendChild(alertBox);
+            
+            alertBox.querySelector('button').addEventListener('click', () => {
+                document.body.removeChild(alertBox);
+            });
+        });
+
+        // 功能按钮点击事件
+        document.querySelectorAll('.func-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const alertBox = document.createElement('div');
+                alertBox.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    padding: 20px;
+                    border-radius: 16px;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+                    width: 260px;
+                    z-index: 9999;
+                    text-align: center;
+                    font-size: 15px;
+                    color: #333;
+                `;
+                alertBox.innerHTML = `
+                    <div style="margin-bottom: 16px;">你选择了【${btn.textContent}】</div>
+                    <div style="font-size: 14px; color: #666; margin-bottom: 16px;">正在为你加载相关内容...</div>
+                    <button style="
+                        padding: 8px 24px;
+                        background: #9d65ff;
+                        color: white;
+                        border: none;
+                        border-radius: 20px;
+                        font-size: 14px;
+                        cursor: pointer;
+                    ">确定</button>
+                `;
+                document.body.appendChild(alertBox);
+                
+                alertBox.querySelector('button').addEventListener('click', () => {
+                    document.body.removeChild(alertBox);
+                });
+            });
+        });
+
+        // 推荐项点击事件
+        document.querySelectorAll('.recommend-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const title = item.querySelector('.item-title').textContent.replace(/[🎭🍜📸🎪⚡🗺️]/, '').trim();
+                const desc = item.querySelector('.item-desc').textContent;
+                const alertBox = document.createElement('div');
+                alertBox.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    padding: 20px;
+                    border-radius: 16px;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+                    width: 260px;
+                    z-index: 9999;
+                    text-align: center;
+                    font-size: 15px;
+                    color: #333;
+                `;
+                alertBox.innerHTML = `
+                    <div style="margin-bottom: 12px; color: #9d65ff; font-weight: 600;">${title}</div>
+                    <div style="font-size: 14px; color: #666; margin-bottom: 16px;">${desc}</div>
+                    <button style="
+                        padding: 8px 24px;
+                        background: #9d65ff;
+                        color: white;
+                        border: none;
+                        border-radius: 20px;
+                        font-size: 14px;
+                        cursor: pointer;
+                    ">查看详情</button>
+                `;
+                document.body.appendChild(alertBox);
+                
+                alertBox.querySelector('button').addEventListener('click', () => {
+                    document.body.removeChild(alertBox);
+                });
+            });
+        });
+
+        // 手动滑动功能
+        const scrollContainer = document.getElementById('recommend-scroll');
+        let isDragging = false;
+        let startX;
+        let scrollLeft;
+
+        scrollContainer.addEventListener('mousedown', startDrag);
+        scrollContainer.addEventListener('touchstart', startDrag, { passive: true });
+        scrollContainer.addEventListener('mousemove', drag);
+        scrollContainer.addEventListener('touchmove', drag, { passive: true });
+        scrollContainer.addEventListener('mouseup', endDrag);
+        scrollContainer.addEventListener('mouseleave', endDrag);
+        scrollContainer.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            isDragging = true;
+            scrollContainer.classList.add('dragging');
+            startX = (e.type === 'mousedown' ? e.pageX : e.touches[0].pageX) - scrollContainer.offsetLeft;
+            scrollLeft = scrollContainer.scrollLeft;
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = (e.type === 'mousemove' ? e.pageX : e.touches[0].pageX) - scrollContainer.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            scrollContainer.scrollLeft = scrollLeft - walk;
+        }
+
+        function endDrag() {
+            isDragging = false;
+            scrollContainer.classList.remove('dragging');
+        }
+
+        // 滚动时暂停自动动画
+        let scrollTimer;
+        scrollContainer.addEventListener('scroll', () => {
+            const scrollWrapper = scrollContainer.querySelector('.scroll-wrapper');
+            scrollWrapper.style.animationPlayState = 'paused';
+            
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                scrollWrapper.style.animationPlayState = 'running';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

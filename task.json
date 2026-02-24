@@ -1,0 +1,25 @@
+{
+    "tasks": [
+        {
+            "id": "1",
+            "name": "Project Initialization",
+            "description": "Create task.json, Progress.txt, Claude.md",
+            "status": "pending",
+            "priority": "High"
+        },
+        {
+            "id": "2",
+            "name": "Map Integration",
+            "description": "Integrate Tencent Maps with cartoon style, user location, and note markers.",
+            "status": "completed",
+            "priority": "High"
+        },
+        {
+            "id": "3",
+            "name": "UI Optimization",
+            "description": "Scale down manual location modal by 30% and implement Province-City-District selection.",
+            "status": "completed",
+            "priority": "Medium"
+        }
+    ]
+}

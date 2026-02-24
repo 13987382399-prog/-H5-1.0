@@ -1,0 +1,21 @@
+{
+  "name": "kunming-old-street-guide",
+  "version": "1.0.0",
+  "description": "昆明老街文旅伴游助手",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "kunming",
+    "travel",
+    "guide",
+    "ai"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
