@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>文旅演示界面 | 昆明老街地图版</title>
     <style>
         * {
@@ -10,6 +10,7 @@
             padding: 0;
             box-sizing: border-box;
             font-family: "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+            -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
         }
 
         /* 地图容器 */
@@ -28,37 +29,24 @@
         }
 
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4eaf5 100%);
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden; /* 防止出现滚动条 */
+            background: #f5f7fa;
         }
 
-        /* 手机模拟框 - 更真实的质感 */
+        /* 手机容器 - 全屏适配 */
         .phone-container {
-            width: 320px;
-            height: 664px;
-            border: 12px solid #1a1a1a;
-            border-radius: 44px;
-            background: #fff; /* 纯白色背景 */
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 0;
+            background: #fff;
             overflow: hidden;
             position: relative;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.18), 
-                        0 2px 10px rgba(0,0,0,0.12);
-            /* 模拟手机顶部听筒 */
-            &::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 100px;
-                height: 20px;
-                background: #1a1a1a;
-                border-bottom-left-radius: 12px;
-                border-bottom-right-radius: 12px;
-            }
+            box-shadow: none;
         }
 
         /* 屏幕内容区 - 移除所有背景相关内容 */
@@ -73,7 +61,7 @@
         /* 附近推荐滚动栏 - 背景透明度调整为90% */
         .nearby-recommend {
             position: absolute;
-            top: 20px;
+            top: env(safe-area-inset-top, 20px);
             left: 0;
             width: 100%;
             padding: 0 20px;
@@ -306,7 +294,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            padding: 24px 24px 10px; /* 减小底部padding，让按钮视觉下移 */
+            padding: 24px 24px calc(10px + env(safe-area-inset-bottom, 0px)); /* 适配底部安全区 */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -391,7 +379,7 @@
             flex-direction: column;
             overflow: hidden;
             animation: slideUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-            border-radius: 32px; /* 匹配手机圆角 */
+            border-radius: 0; /* 全屏模式移除圆角 */
         }
 
         @keyframes slideUp {
