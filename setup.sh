@@ -52,7 +52,7 @@ fi
 echo "配置环境变量..."
 # 写入 .env 文件
 cat > .env <<EOF
-PORT=80
+PORT=3000
 DASHSCOPE_API_KEY=sk-ccd54aa1ffaa47c39cfc529f0228b378
 EOF
 
@@ -64,4 +64,4 @@ pm2 save
 pm2 startup
 
 echo "=== 部署完成！ ==="
-echo "请访问: http://8.137.59.55"
+echo "请访问: http://8.137.59.55:3000"

@@ -30,7 +30,7 @@ curl -O https://raw.githubusercontent.com/13987382399-prog/-H5-1.0/master/setup.
 
 ### 3. 访问网站
 部署完成后，直接访问：
-[http://8.137.59.55](http://8.137.59.55)
+[http://8.137.59.55:3000](http://8.137.59.55:3000)
 
 ---
 
@@ -61,7 +61,7 @@ npm install -g pm2
 
 ### 3. 启动服务
 ```bash
-echo "PORT=80" > .env
+echo "PORT=3000" > .env
 echo "DASHSCOPE_API_KEY=sk-ccd54aa1ffaa47c39cfc529f0228b378" >> .env
 pm2 start server.js --name "kunming-guide"
 pm2 save
@@ -79,4 +79,4 @@ pm2 startup
 3.  点击 Deploy。
 
 ### 本地测试
-在本项目目录下运行 `npm start`，访问 `http://localhost:8084`。
+在本项目目录下运行 `npm start`，访问 `http://localhost:3000`。
