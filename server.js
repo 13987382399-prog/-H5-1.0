@@ -77,7 +77,9 @@ const server = http.createServer((req, res) => {
     // 处理静态文件请求
     console.log(`Request for ${req.url}`);
     
-    let filePath = '.' + req.url;
+    // 解码 URL 以支持中文文件名
+    const decodedUrl = decodeURIComponent(req.url);
+    let filePath = '.' + decodedUrl;
     if (filePath === './') {
         filePath = './index.html';
     }
@@ -107,7 +109,12 @@ const server = http.createServer((req, res) => {
             }
         } else {
             res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content, 'utf-8');
+            // 对于图片等二进制文件，不应指定 encoding 为 utf-8
+            if (contentType.startsWith('text/') || contentType === 'application/json') {
+                res.end(content, 'utf-8');
+            } else {
+                res.end(content);
+            }
         }
     });
 });
