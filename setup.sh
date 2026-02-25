@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# 检查是否以 root 权限运行
+if [ "$EUID" -ne 0 ]; then
+  echo "请使用 root 权限运行此脚本 (例如: sudo ./setup.sh)"
+  exit 1
+fi
+
 echo "=== 开始自动部署昆明老街文旅助手 ==="
 
 # 1. 检测并安装 Node.js 和 Git
