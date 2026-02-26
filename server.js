@@ -40,7 +40,7 @@ const server = http.createServer((req, res) => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${DASHSCOPE_API_KEY}`
+                        'Authorization': `Bearer ${ALI_API_KEY}`
                     }
                 };
 
