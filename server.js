@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3000;
-const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY;
+const ALI_API_KEY = process.env.ALI_API_KEY;
 
 const server = http.createServer((req, res) => {
     // 处理 API 请求

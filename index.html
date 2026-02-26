@@ -1364,12 +1364,13 @@
 
                 function handleIpError(err) {
                     console.error('IP定位出错:', err);
-                    let errorMsg = '定位失败，请手动选择';
-                    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                        errorMsg = '建议使用 HTTPS 访问以获取精确定位';
-                    }
-                    showToast(errorMsg);
-                    showManualLocationModal();
+                    // 定位失败默认设置为昆明
+                    const defaultLat = 24.8801;
+                    const defaultLng = 102.8329;
+                    const defaultCity = '昆明市';
+                    
+                    handleIpSuccess(defaultLat, defaultLng, defaultCity);
+                    showToast('定位失败，已默认切换至昆明');
                 }
             }
         });
@@ -1952,8 +1953,11 @@
                 .then(response => response.json())
                 .then(data => {
                     removeLoading(loadingId);
+                    // 兼容多种API返回格式
                     if (data.output && data.output.text) {
                         appendMessage(data.output.text, 'ai');
+                    } else if (data.output && data.output.choices && data.output.choices[0] && data.output.choices[0].message) {
+                        appendMessage(data.output.choices[0].message.content, 'ai');
                     } else if (data.error) {
                         appendMessage('抱歉，由于网络问题，我暂时无法回答。(' + data.error + ')', 'ai');
                     } else {
