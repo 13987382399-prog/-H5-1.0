@@ -1375,17 +1375,17 @@
                                     break;
                             }
                             console.warn('HTML5 定位失败:', errorMsg, error);
-                            showToast(`${errorMsg}，尝试网络定位...`);
+                            showToast(`${errorMsg}，使用默认位置...`);
                             
-                            // HTML5 定位失败后，降级尝试 IP 定位
-                            tryIpGeolocation();
+                            // HTML5 定位失败后，直接使用默认位置（不再尝试网络定位）
+                            handleIpError('GPS定位失败，跳过网络定位，使用默认位置');
                         },
                         options
                     );
                 } else {
                     // 浏览器不支持 HTML5 定位
-                    showToast('浏览器不支持定位 API，尝试网络定位...');
-                    tryIpGeolocation();
+                    showToast('浏览器不支持定位 API，使用默认位置...');
+                    handleIpError('浏览器不支持定位，使用默认位置');
                 }
             });
 
@@ -1498,7 +1498,7 @@
             }
 
             function handleIpError(err) {
-                console.error('IP定位出错:', err);
+                console.warn('定位降级:', err);
                 // 定位失败默认设置为昆明
                 const defaultLat = 24.8801;
                 const defaultLng = 102.8329;
@@ -1506,7 +1506,7 @@
                 
                 // 避免无限递归，直接调用业务逻辑
                 console.log('切换到默认位置：昆明');
-                showToast('定位失败，已默认切换至昆明');
+                showToast('定位失败，已切换至默认位置(昆明)');
                 
                 if (typeof initMap === 'function') {
                     initMap(defaultLat, defaultLng);
