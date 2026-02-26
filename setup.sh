@@ -53,7 +53,7 @@ echo "配置环境变量..."
 # 写入 .env 文件
 cat > .env <<EOF
 PORT=3000
-DASHSCOPE_API_KEY=sk-ccd54aa1ffaa47c39cfc529f0228b378
+ALI_API_KEY=sk-90ebbd5d2fd04b87881919bf4b2abc9d
 EOF
 
 # 5. 启动服务

@@ -62,7 +62,7 @@ npm install -g pm2
 ### 3. 启动服务
 ```bash
 echo "PORT=3000" > .env
-echo "DASHSCOPE_API_KEY=sk-ccd54aa1ffaa47c39cfc529f0228b378" >> .env
+echo "ALI_API_KEY=sk-90ebbd5d2fd04b87881919bf4b2abc9d" >> .env
 pm2 start server.js --name "kunming-guide"
 pm2 save
 pm2 startup
@@ -75,7 +75,7 @@ pm2 startup
 ### Vercel 托管
 如果你不想维护服务器，也可以使用 Vercel：
 1.  访问 [Vercel](https://vercel.com/) 并导入 GitHub 仓库。
-2.  添加环境变量 `DASHSCOPE_API_KEY`。
+2.  添加环境变量 `ALI_API_KEY`。
 3.  点击 Deploy。
 
 ### 本地测试
