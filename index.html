@@ -1237,46 +1237,8 @@
             noteMarkers.push(markers);
         }
 
-        // 页面加载完成后立即显示定位请求提示
+        // 页面加载完成后立即自动开始定位
         window.addEventListener('DOMContentLoaded', function() {
-            // 创建遮罩层
-            const overlay = document.createElement('div');
-            overlay.className = 'overlay';
-            document.body.appendChild(overlay);
-            
-            // 创建定位请求弹窗
-            const locationModal = document.createElement('div');
-            locationModal.className = 'location-modal';
-            locationModal.innerHTML = `
-                <span class="location-icon">📍</span>
-                <div class="location-title">获取定位</div>
-                <div class="location-desc">功能均基于定位实现，开启位置权限体验更佳</div>
-                <div class="location-buttons">
-                    <button class="location-btn deny">暂不允许</button>
-                    <button class="location-btn allow">允许</button>
-                </div>
-            `;
-            document.body.appendChild(locationModal);
-            
-            // 按钮点击事件
-            const denyBtn = locationModal.querySelector('.deny');
-            const allowBtn = locationModal.querySelector('.allow');
-            
-            // 关闭弹窗的通用函数
-            function closeModal() {
-                if (document.body.contains(locationModal)) {
-                    document.body.removeChild(locationModal);
-                }
-                if (document.body.contains(overlay)) {
-                    document.body.removeChild(overlay);
-                }
-            }
-            
-            // 暂不允许 - 打开手动选择定位界面
-            denyBtn.addEventListener('click', function() {
-                closeModal();
-                showManualLocationModal();
-            });
             
             // 坐标转换工具函数 (WGS84 -> GCJ02)
             // 腾讯地图使用 GCJ02 坐标系，HTML5/IP API 返回 WGS84，直接使用会有偏移
@@ -1325,11 +1287,21 @@
                 return false;
             }
 
-            // 允许定位
-            allowBtn.addEventListener('click', function() {
-                closeModal();
-                showToast('正在请求定位权限...');
+            // 启动自动定位
+            function startAutoLocation() {
+                showToast('正在自动获取定位...');
                 
+                // 标记定位是否已完成（避免重复处理）
+                let locationDone = false;
+                
+                // 手动强制超时计时器 (5秒)
+                const manualTimeoutId = setTimeout(function() {
+                    if (!locationDone) {
+                        locationDone = true;
+                        handleIpError({ code: 3, message: '定位强制超时(5s)' });
+                    }
+                }, 5000);
+
                 // 优先使用 HTML5 Geolocation API
                 if (navigator.geolocation) {
                     const options = {
@@ -1341,6 +1313,10 @@
                     navigator.geolocation.getCurrentPosition(
                         // 成功回调
                         function(position) {
+                            if (locationDone) return; // 如果已超时，则忽略成功回调
+                            locationDone = true;
+                            clearTimeout(manualTimeoutId); // 清除强制超时计时器
+
                             let lat = position.coords.latitude;
                             let lng = position.coords.longitude;
                             const accuracy = position.coords.accuracy;
@@ -1359,6 +1335,10 @@
                         },
                         // 失败回调
                         function(error) {
+                            if (locationDone) return;
+                            locationDone = true;
+                            clearTimeout(manualTimeoutId);
+
                             let errorMsg = '定位失败';
                             switch(error.code) {
                                 case error.PERMISSION_DENIED:
@@ -1375,127 +1355,26 @@
                                     break;
                             }
                             console.warn('HTML5 定位失败:', errorMsg, error);
-                            showToast(`${errorMsg}，使用默认位置...`);
-                            
-                            // HTML5 定位失败后，直接使用默认位置（不再尝试网络定位）
-                            handleIpError('GPS定位失败，跳过网络定位，使用默认位置');
+                            // 直接调用错误处理，降级到默认位置
+                            handleIpError(errorMsg);
                         },
                         options
                     );
                 } else {
                     // 浏览器不支持 HTML5 定位
-                    showToast('浏览器不支持定位 API，使用默认位置...');
-                    handleIpError('浏览器不支持定位，使用默认位置');
-                }
-            });
-
-            // IP 定位备选方案
-            async function tryIpGeolocation() {
-                const apis = [
-                    // 方案1: ipapi.co (HTTPS, JSON)
-                    { url: 'https://ipapi.co/json/', type: 'ipapi' },
-                    // 方案2: ipwho.is (HTTPS, JSON) - 无需API Key
-                    { url: 'https://ipwho.is/', type: 'ipwho' },
-                    // 方案3: ip-api.com (HTTP, 会被 Mixed Content 拦截，仅作降级)
-                    { url: 'http://ip-api.com/json/?lang=zh-CN', type: 'ip-api' }
-                ];
-
-                let success = false;
-
-                for (const api of apis) {
-                    // 如果是 HTTP API 且当前是 HTTPS 环境，跳过以避免 Mixed Content 错误
-                    if (api.url.startsWith('http:') && window.location.protocol === 'https:') {
-                        console.warn(`跳过 ${api.url} 因为当前是 HTTPS 环境`);
-                        continue;
+                    if (!locationDone) {
+                        locationDone = true;
+                        clearTimeout(manualTimeoutId);
+                        handleIpError('浏览器不支持定位，使用默认位置');
                     }
-
-                    try {
-                        console.log(`尝试使用 IP 定位 API: ${api.url}`);
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-
-                        const response = await fetch(api.url, { signal: controller.signal });
-                        clearTimeout(timeoutId);
-
-                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                        
-                        const data = await response.json();
-                        let lat, lng, city;
-
-                        // 根据不同 API 规范化数据
-                        if (api.type === 'ipapi') {
-                            if (data.error) throw new Error(data.reason);
-                            lat = data.latitude;
-                            lng = data.longitude;
-                            city = data.city;
-                        } else if (api.type === 'ipwho') {
-                            if (!data.success) throw new Error(data.message);
-                            lat = data.latitude;
-                            lng = data.longitude;
-                            city = data.city;
-                        } else if (api.type === 'ip-api') {
-                            if (data.status !== 'success') throw new Error(data.message);
-                            lat = data.lat;
-                            lng = data.lon;
-                            city = data.city;
-                        }
-
-                        if (lat && lng) {
-                            // 坐标转换：WGS84 -> GCJ02 (IP定位通常也是WGS84)
-                            const gcjPoint = wgs84ToGcj02(parseFloat(lat), parseFloat(lng));
-                            handleIpSuccess(gcjPoint.lat, gcjPoint.lng, city);
-                            success = true;
-                            break; // 成功则退出循环
-                        }
-                    } catch (err) {
-                        console.warn(`IP 定位 API ${api.url} 失败:`, err);
-                        // 继续尝试下一个 API
-                    }
-                }
-
-                // 如果所有 API 都失败，使用默认位置
-                if (!success) {
-                    handleIpError('所有 IP 定位 API 均失败');
                 }
             }
 
-            function handleIpSuccess(lat, lng, city) {
-                // 简单的城市名称中文化映射 (针对常用演示城市)
-                const cityMap = {
-                    'Kunming': '昆明市',
-                    'Dali': '大理白族自治州',
-                    'Lijiang': '丽江市',
-                    'Chengdu': '成都市',
-                    'Beijing': '北京市',
-                    'Shanghai': '上海市',
-                    'Guangzhou': '广州市',
-                    'Shenzhen': '深圳市'
-                };
-                
-                // 如果在映射表中，则替换
-                if (cityMap[city]) {
-                    city = cityMap[city];
-                }
-                
-                // 确保 city 有值
-                city = city || '未知城市';
+            // 立即执行自动定位
+            startAutoLocation();
 
-                showToast('已通过网络大致定位：' + city + ' (可能存在偏差)');
-                console.log('IP定位成功(已转GCJ02)：', city, lat, lng);
-                
-                // 确保 lat/lng 是数字
-                lat = parseFloat(lat);
-                lng = parseFloat(lng);
+            // 移除 tryIpGeolocation 函数和 handleIpSuccess 函数，彻底禁用网络定位降级
 
-                if (typeof initMap === 'function') {
-                    initMap(lat, lng);
-                }
-                
-                // 只有当 updateWeather 存在时才调用
-                if (typeof updateWeather === 'function') {
-                    updateWeather(lat, lng, city);
-                }
-            }
 
             function handleIpError(err) {
                 console.warn('定位降级:', err);
