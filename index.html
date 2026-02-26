@@ -1318,43 +1318,77 @@
 
             // IP 定位备选方案
             function tryIpGeolocation() {
-                // 优先使用 HTTPS 兼容的 API
+                // 定义 API 列表 (按优先级排序)
                 const apis = [
-                    // 方案1: ipapi.co (HTTPS, JSON)
-                    'https://ipapi.co/json/',
-                    // 方案2: ip-api.com (HTTP, 会被 Mixed Content 拦截，仅作降级)
-                    'http://ip-api.com/json/?lang=zh-CN'
+                    // 方案1: ipwho.is (HTTPS/HTTP, 无需Key, 限制较少)
+                    { url: 'https://ipwho.is/', type: 'ipwho' },
+                    // 方案2: ipapi.co (HTTPS/HTTP, 限制较多)
+                    { url: 'https://ipapi.co/json/', type: 'ipapi' },
+                    // 方案3: ip-api.com (仅HTTP可用, HTTPS下会被拦截)
+                    { url: 'http://ip-api.com/json/?lang=zh-CN', type: 'ip-api' }
                 ];
 
-                // 尝试第一个 API
-                fetch(apis[0])
-                    .then(response => {
-                        if (!response.ok) throw new Error('API 1 failed');
-                        return response.json();
-                    })
-                    .then(data => {
-                        const lat = data.latitude;
-                        const lng = data.longitude;
-                        const city = data.city;
-                        handleIpSuccess(lat, lng, city);
-                    })
-                    .catch(() => {
-                        // 失败后尝试第二个 API (仅在非HTTPS环境下有效)
-                        if (window.location.protocol !== 'https:') {
-                            fetch(apis[1])
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.status === 'success') {
-                                        handleIpSuccess(data.lat, data.lon, data.city);
-                                    } else {
-                                        throw new Error('API 2 failed');
-                                    }
-                                })
-                                .catch(handleIpError);
-                        } else {
-                            handleIpError();
-                        }
-                    });
+                let currentApiIndex = 0;
+
+                function tryNext() {
+                    // 所有 API 都失败了
+                    if (currentApiIndex >= apis.length) {
+                        handleIpError('All IP APIs failed');
+                        return;
+                    }
+
+                    const api = apis[currentApiIndex];
+                    currentApiIndex++;
+
+                    // 如果当前是 HTTPS 环境，跳过仅 HTTP 支持的 API
+                    if (api.url.startsWith('http:') && window.location.protocol === 'https:') {
+                        tryNext();
+                        return;
+                    }
+
+                    console.log('正在尝试 IP 定位 API:', api.url);
+                    
+                    fetch(api.url)
+                        .then(response => {
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            return response.json();
+                        })
+                        .then(data => {
+                            let lat, lng, city;
+                            
+                            // 解析不同 API 的返回格式
+                            if (api.type === 'ipwho') {
+                                if (!data.success) throw new Error(data.message || 'ipwho failed');
+                                lat = data.latitude;
+                                lng = data.longitude;
+                                city = data.city;
+                            } else if (api.type === 'ipapi') {
+                                if (data.error) throw new Error(data.reason || 'ipapi failed');
+                                lat = data.latitude;
+                                lng = data.longitude;
+                                city = data.city;
+                            } else if (api.type === 'ip-api') {
+                                if (data.status !== 'success') throw new Error('ip-api failed');
+                                lat = data.lat;
+                                lng = data.lon;
+                                city = data.city;
+                            }
+
+                            if (lat && lng) {
+                                handleIpSuccess(lat, lng, city || '未知城市');
+                            } else {
+                                throw new Error('Invalid data format');
+                            }
+                        })
+                        .catch(err => {
+                            console.warn('API failed:', api.url, err);
+                            // 当前 API 失败，尝试下一个
+                            tryNext();
+                        });
+                }
+
+                // 开始尝试第一个 API
+                tryNext();
 
                 function handleIpSuccess(lat, lng, city) {
                     showToast('已自动识别当前城市：' + city);
