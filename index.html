@@ -1356,7 +1356,7 @@
                     });
 
                 function handleIpSuccess(lat, lng, city) {
-                    showToast('已通过网络定位到当前城市');
+                    showToast('已自动识别当前城市：' + city);
                     console.log('IP定位成功：', city, lat, lng);
                     initMap(lat, lng);
                     updateWeather(lat, lng, city);
