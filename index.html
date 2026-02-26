@@ -1317,34 +1317,60 @@
 
             // IP 定位备选方案
             function tryIpGeolocation() {
-                // 使用 ip-api.com (支持 HTTP，适合当前环境)
-                // 注意：如果未来升级到 HTTPS，此接口可能需要更换为支持 HTTPS 的服务
-                fetch('http://ip-api.com/json/?lang=zh-CN')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            const lat = data.lat;
-                            const lng = data.lon;
-                            const city = data.city;
-                            showToast('已通过网络定位到当前城市');
-                            console.log('IP定位成功：', city, lat, lng);
-                            initMap(lat, lng);
-                            // 直接传递城市名，避免再次逆地理编码
-                            updateWeather(lat, lng, city);
-                        } else {
-                            throw new Error('IP定位失败');
-                        }
+                // 优先使用 HTTPS 兼容的 API
+                const apis = [
+                    // 方案1: ipapi.co (HTTPS, JSON)
+                    'https://ipapi.co/json/',
+                    // 方案2: ip-api.com (HTTP, 会被 Mixed Content 拦截，仅作降级)
+                    'http://ip-api.com/json/?lang=zh-CN'
+                ];
+
+                // 尝试第一个 API
+                fetch(apis[0])
+                    .then(response => {
+                        if (!response.ok) throw new Error('API 1 failed');
+                        return response.json();
                     })
-                    .catch(err => {
-                        console.error('IP定位出错:', err);
-                        let errorMsg = '定位失败，请手动选择';
-                        // 如果是 HTTP 环境且非 localhost，提示用户 HTTPS 问题
-                        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                            errorMsg = '定位需要HTTPS环境，请手动选择';
+                    .then(data => {
+                        const lat = data.latitude;
+                        const lng = data.longitude;
+                        const city = data.city;
+                        handleIpSuccess(lat, lng, city);
+                    })
+                    .catch(() => {
+                        // 失败后尝试第二个 API (仅在非HTTPS环境下有效)
+                        if (window.location.protocol !== 'https:') {
+                            fetch(apis[1])
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.status === 'success') {
+                                        handleIpSuccess(data.lat, data.lon, data.city);
+                                    } else {
+                                        throw new Error('API 2 failed');
+                                    }
+                                })
+                                .catch(handleIpError);
+                        } else {
+                            handleIpError();
                         }
-                        showToast(errorMsg);
-                        showManualLocationModal();
                     });
+
+                function handleIpSuccess(lat, lng, city) {
+                    showToast('已通过网络定位到当前城市');
+                    console.log('IP定位成功：', city, lat, lng);
+                    initMap(lat, lng);
+                    updateWeather(lat, lng, city);
+                }
+
+                function handleIpError(err) {
+                    console.error('IP定位出错:', err);
+                    let errorMsg = '定位失败，请手动选择';
+                    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                        errorMsg = '建议使用 HTTPS 访问以获取精确定位';
+                    }
+                    showToast(errorMsg);
+                    showManualLocationModal();
+                }
             }
         });
         
