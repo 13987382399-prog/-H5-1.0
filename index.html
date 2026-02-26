@@ -1298,28 +1298,9 @@
                         },
                         // 定位失败
                         function(error) {
-                            let errorMsg = '';
-                            switch(error.code) {
-                                case error.PERMISSION_DENIED:
-                                    errorMsg = '你拒绝了定位请求';
-                                    break;
-                                case error.POSITION_UNAVAILABLE:
-                                    errorMsg = '定位服务不可用(请检查设备定位开关)';
-                                    break;
-                                case error.TIMEOUT:
-                                    errorMsg = '定位请求超时(请尝试刷新或检查网络)';
-                                    break;
-                                case error.UNKNOWN_ERROR:
-                                    errorMsg = '发生未知错误';
-                                    break;
-                            }
-                            showToast(errorMsg + '，请手动选择定位');
-                            // 如果是 HTTP 环境且非 localhost，提示用户
-                            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                                showToast('注意：非HTTPS环境可能无法使用定位，请使用localhost访问');
-                            }
-                            // 定位失败时也打开手动选择界面
-                            showManualLocationModal();
+                            // 定位失败，尝试使用 IP 定位作为备选方案
+                            showToast('精确定位失败，正在尝试网络定位...');
+                            tryIpGeolocation();
                         },
                         {
                             enableHighAccuracy: true,
@@ -1328,11 +1309,43 @@
                         }
                     );
                 } else {
-                    // 浏览器不支持定位
-                    showToast('你的浏览器不支持定位功能，请手动选择定位');
-                    showManualLocationModal();
+                    // 浏览器不支持定位，尝试 IP 定位
+                    showToast('浏览器不支持定位，正在尝试网络定位...');
+                    tryIpGeolocation();
                 }
             });
+
+            // IP 定位备选方案
+            function tryIpGeolocation() {
+                // 使用 ip-api.com (支持 HTTP，适合当前环境)
+                // 注意：如果未来升级到 HTTPS，此接口可能需要更换为支持 HTTPS 的服务
+                fetch('http://ip-api.com/json/?lang=zh-CN')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const lat = data.lat;
+                            const lng = data.lon;
+                            const city = data.city;
+                            showToast('已通过网络定位到当前城市');
+                            console.log('IP定位成功：', city, lat, lng);
+                            initMap(lat, lng);
+                            // 直接传递城市名，避免再次逆地理编码
+                            updateWeather(lat, lng, city);
+                        } else {
+                            throw new Error('IP定位失败');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('IP定位出错:', err);
+                        let errorMsg = '定位失败，请手动选择';
+                        // 如果是 HTTP 环境且非 localhost，提示用户 HTTPS 问题
+                        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                            errorMsg = '定位需要HTTPS环境，请手动选择';
+                        }
+                        showToast(errorMsg);
+                        showManualLocationModal();
+                    });
+            }
         });
         
         // 显示手动选择定位界面
