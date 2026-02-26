@@ -1356,6 +1356,26 @@
                     });
 
                 function handleIpSuccess(lat, lng, city) {
+                    // 简单的城市名称中文化映射 (针对常用演示城市)
+                    const cityMap = {
+                        'Kunming': '昆明市',
+                        'Dali': '大理白族自治州',
+                        'Lijiang': '丽江市',
+                        'Chengdu': '成都市',
+                        'Beijing': '北京市',
+                        'Shanghai': '上海市',
+                        'Guangzhou': '广州市',
+                        'Shenzhen': '深圳市'
+                    };
+                    
+                    // 如果在映射表中，则替换；否则尝试移除 "City" 后缀 (如果有)
+                    if (cityMap[city]) {
+                        city = cityMap[city];
+                    } else if (city && /^[a-zA-Z\s]+$/.test(city)) {
+                        // 如果是纯英文，尝试保留原样，但在实际应用中可能需要更完善的翻译接口
+                        // 这里对于未知的英文城市，暂时保留原样，或者可以默认显示 "未知城市"
+                    }
+
                     showToast('已自动识别当前城市：' + city);
                     console.log('IP定位成功：', city, lat, lng);
                     initMap(lat, lng);
