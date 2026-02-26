@@ -1281,36 +1281,58 @@
             // 允许定位
             allowBtn.addEventListener('click', function() {
                 closeModal();
-                // 调用浏览器的定位API
+                showToast('正在请求定位权限...');
+                
+                // 优先使用 HTML5 Geolocation API
                 if (navigator.geolocation) {
+                    const options = {
+                        enableHighAccuracy: true, // 开启高精度
+                        timeout: 10000,           // 10秒超时
+                        maximumAge: 0             // 禁用缓存
+                    };
+
                     navigator.geolocation.getCurrentPosition(
-                        // 定位成功
+                        // 成功回调
                         function(position) {
                             const lat = position.coords.latitude;
                             const lng = position.coords.longitude;
-                            showToast('定位成功，正在为你推荐附近内容');
-                            // 这里可以添加根据经纬度获取具体位置并更新推荐内容的逻辑
-                            console.log('定位成功：', '纬度', lat, '经度', lng);
-                            // 初始化地图
+                            const accuracy = position.coords.accuracy;
+                            
+                            showToast(`定位成功 (精度: ${Math.round(accuracy)}米)`);
+                            console.log('HTML5 定位成功：', lat, lng, '精度', accuracy);
+                            
+                            // 初始化地图和业务
                             initMap(lat, lng);
-                            // 更新天气（模拟）
                             updateWeather(lat, lng);
                         },
-                        // 定位失败
+                        // 失败回调
                         function(error) {
-                            // 定位失败，尝试使用 IP 定位作为备选方案
-                            showToast('精确定位失败，正在尝试网络定位...');
+                            let errorMsg = '定位失败';
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMsg = '用户拒绝了定位请求';
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    errorMsg = '位置信息不可用';
+                                    break;
+                                case error.TIMEOUT:
+                                    errorMsg = '定位请求超时';
+                                    break;
+                                case error.UNKNOWN_ERROR:
+                                    errorMsg = '发生未知错误';
+                                    break;
+                            }
+                            console.warn('HTML5 定位失败:', errorMsg, error);
+                            showToast(`${errorMsg}，尝试网络定位...`);
+                            
+                            // HTML5 定位失败后，降级尝试 IP 定位
                             tryIpGeolocation();
                         },
-                        {
-                            enableHighAccuracy: true,
-                            timeout: 10000,
-                            maximumAge: 0
-                        }
+                        options
                     );
                 } else {
-                    // 浏览器不支持定位，尝试 IP 定位
-                    showToast('浏览器不支持定位，正在尝试网络定位...');
+                    // 浏览器不支持 HTML5 定位
+                    showToast('浏览器不支持定位 API，尝试网络定位...');
                     tryIpGeolocation();
                 }
             });
