@@ -988,6 +988,7 @@
 
 
     <script>
+        console.log('Current Version: v2.0.1 (IP-Fix)');
         // 模拟POI数据 (用于AI推荐算法)
         const mockPois = [
             // 剧本游 (Script) - 🎭
@@ -1364,11 +1365,11 @@
 
                 function handleIpError(err) {
                     console.error('IP定位出错:', err);
-                    let errorMsg = '定位失败，请手动选择';
+                    let errorMsg = '定位失败，已切换到手动选择模式';
                     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                        errorMsg = '建议使用 HTTPS 访问以获取精确定位';
+                        errorMsg = '非HTTPS环境无法精确获取定位，请手动选择城市';
                     }
-                    showToast(errorMsg);
+                    showToast(errorMsg, 3000);
                     showManualLocationModal();
                 }
             }
