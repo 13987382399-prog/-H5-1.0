@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const PORT = process.env.PORT || 8084;
+const PORT = process.env.PORT || 3000;
 const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY;
 
 const server = http.createServer((req, res) => {
