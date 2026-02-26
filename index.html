@@ -1316,81 +1316,124 @@
             });
 
             // IP 定位备选方案
-            function tryIpGeolocation() {
-                // 优先使用 HTTPS 兼容的 API
+            async function tryIpGeolocation() {
                 const apis = [
                     // 方案1: ipapi.co (HTTPS, JSON)
-                    'https://ipapi.co/json/',
-                    // 方案2: ip-api.com (HTTP, 会被 Mixed Content 拦截，仅作降级)
-                    'http://ip-api.com/json/?lang=zh-CN'
+                    { url: 'https://ipapi.co/json/', type: 'ipapi' },
+                    // 方案2: ipwho.is (HTTPS, JSON) - 无需API Key
+                    { url: 'https://ipwho.is/', type: 'ipwho' },
+                    // 方案3: ip-api.com (HTTP, 会被 Mixed Content 拦截，仅作降级)
+                    { url: 'http://ip-api.com/json/?lang=zh-CN', type: 'ip-api' }
                 ];
 
-                // 尝试第一个 API
-                fetch(apis[0])
-                    .then(response => {
-                        if (!response.ok) throw new Error('API 1 failed');
-                        return response.json();
-                    })
-                    .then(data => {
-                        const lat = data.latitude;
-                        const lng = data.longitude;
-                        const city = data.city;
-                        handleIpSuccess(lat, lng, city);
-                    })
-                    .catch(() => {
-                        // 失败后尝试第二个 API (仅在非HTTPS环境下有效)
-                        if (window.location.protocol !== 'https:') {
-                            fetch(apis[1])
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.status === 'success') {
-                                        handleIpSuccess(data.lat, data.lon, data.city);
-                                    } else {
-                                        throw new Error('API 2 failed');
-                                    }
-                                })
-                                .catch(handleIpError);
-                        } else {
-                            handleIpError();
-                        }
-                    });
+                let success = false;
 
-                function handleIpSuccess(lat, lng, city) {
-                    // 简单的城市名称中文化映射 (针对常用演示城市)
-                    const cityMap = {
-                        'Kunming': '昆明市',
-                        'Dali': '大理白族自治州',
-                        'Lijiang': '丽江市',
-                        'Chengdu': '成都市',
-                        'Beijing': '北京市',
-                        'Shanghai': '上海市',
-                        'Guangzhou': '广州市',
-                        'Shenzhen': '深圳市'
-                    };
-                    
-                    // 如果在映射表中，则替换；否则尝试移除 "City" 后缀 (如果有)
-                    if (cityMap[city]) {
-                        city = cityMap[city];
-                    } else if (city && /^[a-zA-Z\s]+$/.test(city)) {
-                        // 如果是纯英文，尝试保留原样，但在实际应用中可能需要更完善的翻译接口
-                        // 这里对于未知的英文城市，暂时保留原样，或者可以默认显示 "未知城市"
+                for (const api of apis) {
+                    // 如果是 HTTP API 且当前是 HTTPS 环境，跳过以避免 Mixed Content 错误
+                    if (api.url.startsWith('http:') && window.location.protocol === 'https:') {
+                        console.warn(`跳过 ${api.url} 因为当前是 HTTPS 环境`);
+                        continue;
                     }
 
-                    showToast('已自动识别当前城市：' + city);
-                    console.log('IP定位成功：', city, lat, lng);
-                    initMap(lat, lng);
-                    updateWeather(lat, lng, city);
+                    try {
+                        console.log(`尝试使用 IP 定位 API: ${api.url}`);
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+
+                        const response = await fetch(api.url, { signal: controller.signal });
+                        clearTimeout(timeoutId);
+
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        
+                        const data = await response.json();
+                        let lat, lng, city;
+
+                        // 根据不同 API 规范化数据
+                        if (api.type === 'ipapi') {
+                            if (data.error) throw new Error(data.reason);
+                            lat = data.latitude;
+                            lng = data.longitude;
+                            city = data.city;
+                        } else if (api.type === 'ipwho') {
+                            if (!data.success) throw new Error(data.message);
+                            lat = data.latitude;
+                            lng = data.longitude;
+                            city = data.city;
+                        } else if (api.type === 'ip-api') {
+                            if (data.status !== 'success') throw new Error(data.message);
+                            lat = data.lat;
+                            lng = data.lon;
+                            city = data.city;
+                        }
+
+                        if (lat && lng) {
+                            handleIpSuccess(lat, lng, city);
+                            success = true;
+                            break; // 成功则退出循环
+                        }
+                    } catch (err) {
+                        console.warn(`IP 定位 API ${api.url} 失败:`, err);
+                        // 继续尝试下一个 API
+                    }
                 }
 
-                function handleIpError(err) {
-                    console.error('IP定位出错:', err);
-                    // 定位失败默认设置为昆明
-                    const defaultLat = 24.8801;
-                    const defaultLng = 102.8329;
-                    const defaultCity = '昆明市';
-                    
-                    handleIpSuccess(defaultLat, defaultLng, defaultCity);
-                    showToast('定位失败，已默认切换至昆明');
+                // 如果所有 API 都失败，使用默认位置
+                if (!success) {
+                    handleIpError('所有 IP 定位 API 均失败');
+                }
+            }
+
+            function handleIpSuccess(lat, lng, city) {
+                // 简单的城市名称中文化映射 (针对常用演示城市)
+                const cityMap = {
+                    'Kunming': '昆明市',
+                    'Dali': '大理白族自治州',
+                    'Lijiang': '丽江市',
+                    'Chengdu': '成都市',
+                    'Beijing': '北京市',
+                    'Shanghai': '上海市',
+                    'Guangzhou': '广州市',
+                    'Shenzhen': '深圳市'
+                };
+                
+                // 如果在映射表中，则替换
+                if (cityMap[city]) {
+                    city = cityMap[city];
+                }
+                
+                // 确保 city 有值
+                city = city || '未知城市';
+
+                showToast('已自动识别当前城市：' + city);
+                console.log('IP定位成功：', city, lat, lng);
+                
+                // 确保 lat/lng 是数字
+                lat = parseFloat(lat);
+                lng = parseFloat(lng);
+
+                if (typeof initMap === 'function') {
+                    initMap(lat, lng);
+                }
+                
+                // 只有当 updateWeather 存在时才调用
+                if (typeof updateWeather === 'function') {
+                    updateWeather(lat, lng, city);
+                }
+            }
+
+            function handleIpError(err) {
+                console.error('IP定位出错:', err);
+                // 定位失败默认设置为昆明
+                const defaultLat = 24.8801;
+                const defaultLng = 102.8329;
+                const defaultCity = '昆明市';
+                
+                // 避免无限递归，直接调用业务逻辑
+                console.log('切换到默认位置：昆明');
+                showToast('定位失败，已默认切换至昆明');
+                
+                if (typeof initMap === 'function') {
+                    initMap(defaultLat, defaultLng);
                 }
             }
         });
