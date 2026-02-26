@@ -1334,7 +1334,7 @@
                 if (navigator.geolocation) {
                     const options = {
                         enableHighAccuracy: true, // 开启高精度
-                        timeout: 10000,           // 10秒超时
+                        timeout: 5000,            // 5秒超时
                         maximumAge: 0             // 禁用缓存
                     };
 
@@ -1500,9 +1500,17 @@
             function handleIpError(err) {
                 console.warn('定位降级:', err);
                 
-                // 定位失败时，提示用户手动选择
-                showToast('定位失败，请手动选择城市');
-                showManualLocationModal();
+                // 定位失败时，自动切换到默认位置（昆明）
+                const defaultLat = 24.8801;
+                const defaultLng = 102.8329;
+                const defaultCity = '昆明市';
+                
+                showToast('定位失败，自动切换至默认城市(昆明)');
+                console.log('定位失败，使用默认坐标：', defaultCity, defaultLat, defaultLng);
+                
+                // 初始化地图和天气
+                initMap(defaultLat, defaultLng);
+                updateWeather(defaultLat, defaultLng, defaultCity);
             }
         });
         
