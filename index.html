@@ -1499,22 +1499,14 @@
 
             function handleIpError(err) {
                 console.warn('定位降级:', err);
-                // 定位失败默认设置为昆明
-                const defaultLat = 24.8801;
-                const defaultLng = 102.8329;
-                const defaultCity = '昆明市';
                 
-                // 避免无限递归，直接调用业务逻辑
-                console.log('切换到默认位置：昆明');
-                showToast('定位失败，已切换至默认位置(昆明)');
-                
-                if (typeof initMap === 'function') {
-                    initMap(defaultLat, defaultLng);
-                }
+                // 定位失败时，提示用户手动选择
+                showToast('定位失败，请手动选择城市');
+                showManualLocationModal();
             }
         });
         
-        // 显示手动选择定位界面
+        // 显示手动选择定位界面（恢复为初始代码中的简单列表模式）
         function showManualLocationModal() {
             // 创建遮罩层
             const overlay = document.createElement('div');
@@ -1526,129 +1518,56 @@
             manualModal.className = 'manual-location-modal';
             manualModal.innerHTML = `
                 <div class="manual-location-title">手动选择定位</div>
-                <div class="selector-container">
-                    <div class="selector-group">
-                        <label class="selector-label">省份</label>
-                        <select class="custom-select" id="province-select">
-                            <option value="">请选择省份</option>
-                        </select>
-                    </div>
-                    <div class="selector-group">
-                        <label class="selector-label">城市</label>
-                        <select class="custom-select" id="city-select" disabled>
-                            <option value="">请选择城市</option>
-                        </select>
-                    </div>
-                    <div class="selector-group">
-                        <label class="selector-label">区/县</label>
-                        <select class="custom-select" id="district-select" disabled>
-                            <option value="">请选择区/县</option>
-                        </select>
-                    </div>
+                <div class="city-list">
+                    <div class="city-item" data-city="昆明" data-lat="24.8801" data-lng="102.8329">昆明</div>
+                    <div class="city-item" data-city="大理" data-lat="25.6065" data-lng="100.2676">大理</div>
+                    <div class="city-item" data-city="丽江" data-lat="26.8550" data-lng="100.2260">丽江</div>
+                    <div class="city-item" data-city="建水" data-lat="23.6347" data-lng="102.8329">建水</div>
+                    <div class="city-item" data-city="西双版纳" data-lat="22.0017" data-lng="100.7979">西双版纳</div>
                 </div>
                 <button class="confirm-city-btn">确认选择</button>
             `;
             document.body.appendChild(manualModal);
             
-            // 模拟三级联动数据
-            const locationData = {
-                '云南省': {
-                    '昆明市': ['五华区', '盘龙区', '官渡区', '西山区', '呈贡区'],
-                    '大理白族自治州': ['大理市', '祥云县', '宾川县', '弥渡县'],
-                    '丽江市': ['古城区', '玉龙纳西族自治县', '永胜县'],
-                    '红河哈尼族彝族自治州': ['蒙自市', '个旧市', '建水县', '弥勒市'],
-                    '西双版纳傣族自治州': ['景洪市', '勐海县', '勐腊县']
-                },
-                '四川省': {
-                    '成都市': ['锦江区', '青羊区', '金牛区', '武侯区', '成华区'],
-                    '绵阳市': ['涪城区', '游仙区', '安州区'],
-                    '乐山市': ['市中区', '沙湾区', '五通桥区']
-                },
-                '贵州省': {
-                    '贵阳市': ['南明区', '云岩区', '花溪区', '乌当区'],
-                    '遵义市': ['红花岗区', '汇川区', '播州区']
-                }
-            };
+            // 城市选择逻辑
+            let selectedCity = '昆明'; // 默认选中昆明
+            let selectedLat = 24.8801;
+            let selectedLng = 102.8329;
             
-            const provinceSelect = document.getElementById('province-select');
-            const citySelect = document.getElementById('city-select');
-            const districtSelect = document.getElementById('district-select');
+            const cityItems = manualModal.querySelectorAll('.city-item');
             const confirmBtn = manualModal.querySelector('.confirm-city-btn');
             
-            // 初始化省份数据
-            for (let province in locationData) {
-                let option = document.createElement('option');
-                option.value = province;
-                option.textContent = province;
-                provinceSelect.appendChild(option);
-            }
+            // 初始化默认选中样式
+            cityItems[0].style.background = '#f0e6ff';
+            cityItems[0].style.color = '#9d65ff';
             
-            // 省份选择事件
-            provinceSelect.addEventListener('change', function() {
-                const province = this.value;
-                citySelect.innerHTML = '<option value="">请选择城市</option>';
-                districtSelect.innerHTML = '<option value="">请选择区/县</option>';
-                districtSelect.disabled = true;
-                
-                if (province) {
-                    citySelect.disabled = false;
-                    const cities = locationData[province];
-                    for (let city in cities) {
-                        let option = document.createElement('option');
-                        option.value = city;
-                        option.textContent = city;
-                        citySelect.appendChild(option);
-                    }
-                } else {
-                    citySelect.disabled = true;
-                }
-            });
-            
-            // 城市选择事件
-            citySelect.addEventListener('change', function() {
-                const province = provinceSelect.value;
-                const city = this.value;
-                districtSelect.innerHTML = '<option value="">请选择区/县</option>';
-                
-                if (city) {
-                    districtSelect.disabled = false;
-                    const districts = locationData[province][city];
-                    districts.forEach(district => {
-                        let option = document.createElement('option');
-                        option.value = district;
-                        option.textContent = district;
-                        districtSelect.appendChild(option);
+            // 城市点击事件
+            cityItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 重置所有城市样式
+                    cityItems.forEach(i => {
+                        i.style.background = '';
+                        i.style.color = '';
                     });
-                } else {
-                    districtSelect.disabled = true;
-                }
+                    // 设置当前选中样式
+                    this.style.background = '#f0e6ff';
+                    this.style.color = '#9d65ff';
+                    selectedCity = this.dataset.city;
+                    selectedLat = parseFloat(this.dataset.lat);
+                    selectedLng = parseFloat(this.dataset.lng);
+                });
             });
             
             // 确认按钮点击事件
             confirmBtn.addEventListener('click', function() {
-                const province = provinceSelect.value;
-                const city = citySelect.value;
-                const district = districtSelect.value;
-                
-                if (!province || !city || !district) {
-                    showToast('请完整选择省市区信息');
-                    return;
-                }
-                
                 document.body.removeChild(manualModal);
                 document.body.removeChild(overlay);
-                const fullLocation = `${province}${city}${district}`;
-                showToast(`已定位至：${fullLocation}`);
-                console.log('手动选择定位：', fullLocation);
+                showToast(`已选择${selectedCity}作为定位城市`);
+                console.log('手动选择定位：', selectedCity, selectedLat, selectedLng);
                 
-                // 根据选择的城市初始化地图（这里简单设置几个城市的坐标示例）
-                let lat = 24.8801, lng = 102.8329; // 默认昆明
-                if (city.includes('大理')) { lat = 25.6065; lng = 100.2676; }
-                else if (city.includes('丽江')) { lat = 26.8550; lng = 100.2260; }
-                else if (city.includes('成都')) { lat = 30.5728; lng = 104.0668; }
-                
-                initMap(lat, lng);
-                updateWeather(lat, lng, city);
+                // 初始化地图和天气
+                initMap(selectedLat, selectedLng);
+                updateWeather(selectedLat, selectedLng, selectedCity);
             });
         }
         
