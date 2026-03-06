@@ -916,8 +916,106 @@
             cursor: pointer;
             width: 100%;
         }
+
+        /* 目的地预览搜索栏 */
+        .destination-search-bar {
+            position: absolute;
+            top: 170px; /* 位于附近推荐下方，预留足够空间 */
+            left: 20px;
+            right: 20px;
+            height: 54px;
+            background: rgba(255, 255, 255, 0.7); /* 调整透明度为70% */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 27px;
+            box-shadow: 
+                0 4px 16px rgba(20, 182, 250, 0.15),
+                0 1px 2px rgba(0, 0, 0, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            display: flex;
+            align-items: center;
+            z-index: 5; /* 地图之上，弹窗之下 */
+            padding: 0 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* 增强过渡效果 */
+            cursor: move;
+            touch-action: none; /* 防止拖动时触发滚动 */
+            user-select: none;
+        }
+
+        /* 点击时的选中效果 - 改用类名控制以避免冲突 */
+        .destination-search-bar.pressing {
+            background: #F0F9FF; /* 与 func-btn:active 一致 */
+            border-color: rgba(20, 182, 250, 0.6);
+            box-shadow: 
+                0 2px 4px -1px rgba(20, 182, 250, 0.1), /* 与 func-btn:active 一致 */
+                inset 0 2px 4px rgba(0, 0, 0, 0.05); /* 与 func-btn:active 一致 */
+            /* transform: translateY(1px); 由于拖拽使用了transform，这里不能直接用 translateY，否则会重置拖拽位置 */
+        }
+
+        .search-section {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            padding-left: 12px;
+        }
+
+        .search-icon-wrapper {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 蓝色渐变图标背景，如果需要更像图1，可以直接用蓝色图标 */
+        }
+
+        .search-input {
+            border: none;
+            background: transparent;
+            font-size: 15px;
+            color: #334155;
+            width: 100%;
+            height: 100%;
+            outline: none;
+            font-weight: 500;
+            margin-left: 4px;
+        }
+        
+        .search-input::placeholder {
+            color: #64748b;
+        }
+
+        .bar-divider {
+            width: 1px;
+            height: 24px;
+            background-color: #e2e8f0;
+            margin: 0 8px;
+        }
+
+        .itinerary-section {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            padding-right: 16px;
+            padding-left: 8px;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .itinerary-section:active {
+            opacity: 0.7;
+        }
+
+        .itinerary-text {
+            font-size: 15px;
+            color: #334155;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
     </style>
-    <script charset="utf-8" src="https://map.qq.com/api/gljs?v=1.exp&key=CRMBZ-LDOK7-3AEXE-PPMU7-2Z2ST-HDBXB"></script>
+    <script charset="utf-8" src="https://map.qq.com/api/gljs?v=1.exp&key=CRMBZ-LDOK7-3AEXE-PPMU7-2Z2ST-HDBXB&libraries=service"></script>
 </head>
 <body>
     <div class="phone-container">
@@ -944,6 +1042,46 @@
                 <!-- 查看详情栏 -->
                 <div class="view-details-bar" id="viewDetailsBtn">
                     <div class="pull-handle"></div>
+                </div>
+            </div>
+
+            <!-- 目的地预览搜索框 + 我的行程按钮 (可拖动) -->
+            <div class="destination-search-bar" id="dragSearchBar">
+                <div class="search-section">
+                    <!-- 蓝色放大镜图标 -->
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="url(#blue-gradient)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <defs>
+                            <linearGradient id="blue-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#6ad4ff" />
+                                <stop offset="100%" style="stop-color:#14b6fa" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" class="search-input" placeholder="输入地点，回车搜索" id="destinationInput">
+                </div>
+                
+                <div class="bar-divider"></div>
+                
+                <div class="itinerary-section">
+                    <!-- 蓝色日历图标 + 绿色对勾 -->
+                    <div style="position: relative; width: 26px; height: 26px; margin-right: 8px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6ad4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                            <rect x="7" y="14" width="2" height="2" fill="#6ad4ff" stroke="none"></rect>
+                            <rect x="11" y="14" width="2" height="2" fill="#6ad4ff" stroke="none"></rect>
+                        </svg>
+                        <div style="position: absolute; bottom: -1px; right: -1px; background: #4ade80; border-radius: 50%; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    <span class="itinerary-text">我的行程</span>
                 </div>
             </div>
 
@@ -1372,6 +1510,234 @@
 
             // 立即执行自动定位
             startAutoLocation();
+
+            // 目的地预览搜索栏拖拽逻辑
+            (function() {
+                const dragItem = document.getElementById('dragSearchBar');
+                let active = false;
+                let currentX;
+                let currentY;
+                let initialX;
+                let initialY;
+                let xOffset = 0;
+                let yOffset = 0;
+
+                // 触摸事件
+                dragItem.addEventListener('touchstart', dragStart, {passive: false});
+                dragItem.addEventListener('touchend', dragEnd, {passive: false});
+                dragItem.addEventListener('touchmove', drag, {passive: false});
+
+                // 鼠标事件
+                dragItem.addEventListener('mousedown', dragStart, false);
+                dragItem.addEventListener('mouseup', dragEnd, false);
+                dragItem.addEventListener('mousemove', drag, false);
+                dragItem.addEventListener('mouseleave', dragEnd, false); // 鼠标离开也停止
+
+                function dragStart(e) {
+                    if (e.type === "touchstart") {
+                        initialX = e.touches[0].clientX - xOffset;
+                        initialY = e.touches[0].clientY - yOffset;
+                    } else {
+                        initialX = e.clientX - xOffset;
+                        initialY = e.clientY - yOffset;
+                    }
+
+                    // 检查点击目标是否是搜索栏本身或其子元素
+                    if (e.target === dragItem || dragItem.contains(e.target)) {
+                        active = true;
+                    }
+                }
+
+                function dragEnd(e) {
+                    active = false;
+                }
+
+                function drag(e) {
+                    if (active) {
+                        e.preventDefault();
+                    
+                        if (e.type === "touchmove") {
+                            currentX = e.touches[0].clientX - initialX;
+                            currentY = e.touches[0].clientY - initialY;
+                        } else {
+                            currentX = e.clientX - initialX;
+                            currentY = e.clientY - initialY;
+                        }
+
+                        xOffset = currentX;
+                        yOffset = currentY;
+
+                        setTranslate(currentX, currentY, dragItem);
+                    }
+                }
+
+                function setTranslate(xPos, yPos, el) {
+                    el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
+                }
+
+                // 移除原有的:active伪类控制，通过JS添加类名来控制按压效果，避免拖拽时也触发按压缩小
+                dragItem.addEventListener('touchstart', () => dragItem.classList.add('pressing'), {passive: true});
+                dragItem.addEventListener('touchend', () => dragItem.classList.remove('pressing'));
+                dragItem.addEventListener('mousedown', () => dragItem.classList.add('pressing'));
+                dragItem.addEventListener('mouseup', () => dragItem.classList.remove('pressing'));
+                dragItem.addEventListener('mouseleave', () => dragItem.classList.remove('pressing'));
+
+                // 点击交互
+                const searchSection = dragItem.querySelector('.search-section');
+                const itinerarySection = dragItem.querySelector('.itinerary-section');
+                const searchInput = document.getElementById('destinationInput');
+
+                // 阻止输入框的拖拽事件冒泡，允许正常输入
+                searchInput.addEventListener('touchstart', (e) => e.stopPropagation(), {passive: true});
+                searchInput.addEventListener('mousedown', (e) => e.stopPropagation());
+                
+                // 监听回车键搜索
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        const keyword = this.value.trim();
+                        if (keyword) {
+                            searchLocation(keyword);
+                            this.blur(); // 收起键盘
+                        }
+                    }
+                });
+                
+                // 监听搜索图标点击
+                searchSection.querySelector('svg').addEventListener('click', (e) => {
+                    e.stopPropagation(); // 阻止触发拖拽
+                    const keyword = searchInput.value.trim();
+                    if (keyword) {
+                        searchLocation(keyword);
+                    } else {
+                        searchInput.focus();
+                    }
+                });
+
+                // 地点搜索功能
+                function searchLocation(keyword) {
+                    showToast('正在搜索: ' + keyword + '...');
+                    
+                    // 使用腾讯地图 Place 搜索服务
+                    // 需确保引入了 service 库: &libraries=service
+                    if (!TMap.service || !TMap.service.Search) {
+                        console.error('TMap.service.Search 未加载');
+                        showToast('地图搜索服务初始化失败');
+                        return;
+                    }
+                    
+                    var search = new TMap.service.Search({ pageSize: 1 });
+                    
+                    search.searchRegion({
+                        keyword: keyword,
+                        cityName: '昆明',
+                        autoExtend: true // 若当前城市无结果，自动扩大范围
+                    }).then((result) => {
+                        if (result.data && result.data.length > 0) {
+                            const poi = result.data[0];
+                            const lat = poi.location.lat;
+                            const lng = poi.location.lng;
+                            const name = poi.title;
+                            
+                            showToast('已定位到: ' + name);
+                            console.log('搜索结果:', name, lat, lng);
+                            
+                            // 移动地图中心
+                            if (map) {
+                                map.setCenter(new TMap.LatLng(lat, lng));
+                                // 可选：设置缩放级别
+                                // map.setZoom(16); 
+                                
+                                // 添加一个临时标记指示搜索结果
+                                addSearchMarker(lat, lng, name);
+                                
+                                // 更新 AI 推荐（基于新位置）
+                                updateRecommendations(lat, lng);
+                                
+                                // 更新天气（基于新位置）
+                                updateWeather(lat, lng, name);
+                            }
+                        } else {
+                            showToast('未找到相关地点，请尝试其他关键词');
+                        }
+                    }).catch((error) => {
+                        console.error('搜索失败:', error);
+                        // 如果是 API 权限问题，有时候会直接进 catch，message 包含相关信息
+                        if (error && error.message && error.message.includes('WebserviceAPI')) {
+                            showToast('错误: Key未开启WebServiceAPI权限');
+                        } else {
+                            showToast('搜索服务异常，请稍后重试');
+                        }
+                    });
+                }
+                
+                // 添加搜索结果标记 (临时)
+                let searchMarker = null;
+                function addSearchMarker(lat, lng, title) {
+                    if (searchMarker) {
+                        searchMarker.setMap(null); // 移除旧标记
+                    }
+                    
+                    searchMarker = new TMap.MultiMarker({
+                        map: map,
+                        styles: {
+                            search: new TMap.MarkerStyle({ 
+                                width: 30, 
+                                height: 42, 
+                                anchor: { x: 15, y: 42 },
+                                src: 'https://mapapi.qq.com/web/lbs/javascriptGL/demo/img/markerDefault.png' 
+                            })
+                        },
+                        geometries: [{
+                            "id": 'search_result',
+                            "styleId": 'search',
+                            "position": new TMap.LatLng(lat, lng),
+                            "properties": {
+                                "title": title
+                            }
+                        }]
+                    });
+                }
+
+                // 区分拖拽和点击
+                let startX, startY;
+                
+                dragItem.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                }, {passive: true});
+
+                dragItem.addEventListener('mousedown', (e) => {
+                    startX = e.clientX;
+                    startY = e.clientY;
+                });
+
+                function handleTap(e, callback) {
+                    let endX, endY;
+                    if (e.type === 'touchend') {
+                        endX = e.changedTouches[0].clientX;
+                        endY = e.changedTouches[0].clientY;
+                    } else {
+                        endX = e.clientX;
+                        endY = e.clientY;
+                    }
+
+                    // 如果移动距离很小，认为是点击
+                    if (Math.abs(endX - startX) < 5 && Math.abs(endY - startY) < 5) {
+                        callback();
+                    }
+                }
+
+                searchSection.addEventListener('touchend', (e) => handleTap(e, () => showToast('即将开放：目的地预览功能')));
+                searchSection.addEventListener('click', (e) => {
+                    if(e.pointerType === 'mouse') showToast('即将开放：目的地预览功能');
+                });
+
+                itinerarySection.addEventListener('touchend', (e) => handleTap(e, () => showToast('即将开放：我的行程功能')));
+                itinerarySection.addEventListener('click', (e) => {
+                    if(e.pointerType === 'mouse') showToast('即将开放：我的行程功能');
+                });
+            })();
+
 
             // 移除 tryIpGeolocation 函数和 handleIpSuccess 函数，彻底禁用网络定位降级
 
