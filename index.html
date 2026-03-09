@@ -920,11 +920,11 @@
         /* 目的地预览搜索栏 */
         .destination-search-bar {
             position: absolute;
-            top: 170px; /* 位于附近推荐下方，预留足够空间 */
-            left: 20px;
-            right: 20px;
+            top: 140px; /* 调整初始位置，更贴合上方元素 */
+            left: 10px; /* 减小左边距，使宽度更宽 */
+            right: 10px; /* 减小右边距 */
             height: 54px;
-            background: rgba(255, 255, 255, 0.7); /* 调整透明度为70% */
+            background: rgba(255, 255, 255, 0.85); /* 略微增加不透明度 */
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-radius: 27px;
@@ -937,7 +937,7 @@
             align-items: center;
             z-index: 5; /* 地图之上，弹窗之下 */
             padding: 0 6px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* 增强过渡效果 */
+            transition: box-shadow 0.2s, background 0.2s; /* 移除 all transition，避免拖拽延迟 */
             cursor: move;
             touch-action: none; /* 防止拖动时触发滚动 */
             user-select: none;
@@ -1436,7 +1436,12 @@
                 const manualTimeoutId = setTimeout(function() {
                     if (!locationDone) {
                         locationDone = true;
-                        handleIpError({ code: 3, message: '定位强制超时(5s)' });
+                        // 检查是否是因为非 HTTPS 导致的超时潜在原因
+                        let msg = '定位强制超时(5s)';
+                        if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                            msg += ' - 检测到非HTTPS环境，定位可能被拦截';
+                        }
+                        handleIpError({ code: 3, message: msg });
                     }
                 }, 5000);
 
@@ -1478,6 +1483,11 @@
                             clearTimeout(manualTimeoutId);
 
                             let errorMsg = '定位失败';
+                            // 增加非安全上下文的提示
+                            if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                                errorMsg += ' (需HTTPS)';
+                            }
+
                             switch(error.code) {
                                 case error.PERMISSION_DENIED:
                                     errorMsg = '用户拒绝了定位请求';
@@ -1489,105 +1499,160 @@
                                     errorMsg = '定位请求超时';
                                     break;
                                 case error.UNKNOWN_ERROR:
-                                    errorMsg = '发生未知错误';
+                                    errorMsg = '定位发生未知错误';
                                     break;
                             }
-                            console.warn('HTML5 定位失败:', errorMsg, error);
-                            // 直接调用错误处理，降级到默认位置
-                            handleIpError(errorMsg);
+                            console.warn('HTML5 定位失败:', error.code, error.message);
+                            handleIpError({ code: error.code, message: errorMsg });
                         },
                         options
                     );
                 } else {
-                    // 浏览器不支持 HTML5 定位
+                    // 浏览器不支持 Geolocation API (通常是因为非 HTTPS 环境)
                     if (!locationDone) {
                         locationDone = true;
                         clearTimeout(manualTimeoutId);
-                        handleIpError('浏览器不支持定位，使用默认位置');
+                        
+                        let msg = '当前浏览器不支持定位功能';
+                        if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                            msg = '定位失败：非HTTPS环境无法使用定位功能';
+                        }
+                        console.warn(msg);
+                        handleIpError({ code: 0, message: msg });
                     }
                 }
             }
 
+
             // 立即执行自动定位
             startAutoLocation();
 
-            // 目的地预览搜索栏拖拽逻辑
+            // 目的地预览搜索栏拖拽逻辑 (仿照 AI 按钮效果)
             (function() {
                 const dragItem = document.getElementById('dragSearchBar');
-                let active = false;
-                let currentX;
-                let currentY;
-                let initialX;
-                let initialY;
-                let xOffset = 0;
-                let yOffset = 0;
-
-                // 触摸事件
-                dragItem.addEventListener('touchstart', dragStart, {passive: false});
-                dragItem.addEventListener('touchend', dragEnd, {passive: false});
-                dragItem.addEventListener('touchmove', drag, {passive: false});
-
-                // 鼠标事件
-                dragItem.addEventListener('mousedown', dragStart, false);
-                dragItem.addEventListener('mouseup', dragEnd, false);
-                dragItem.addEventListener('mousemove', drag, false);
-                dragItem.addEventListener('mouseleave', dragEnd, false); // 鼠标离开也停止
-
-                function dragStart(e) {
-                    if (e.type === "touchstart") {
-                        initialX = e.touches[0].clientX - xOffset;
-                        initialY = e.touches[0].clientY - yOffset;
-                    } else {
-                        initialX = e.clientX - xOffset;
-                        initialY = e.clientY - yOffset;
-                    }
-
-                    // 检查点击目标是否是搜索栏本身或其子元素
-                    if (e.target === dragItem || dragItem.contains(e.target)) {
-                        active = true;
-                    }
-                }
-
-                function dragEnd(e) {
-                    active = false;
-                }
-
-                function drag(e) {
-                    if (active) {
-                        e.preventDefault();
-                    
-                        if (e.type === "touchmove") {
-                            currentX = e.touches[0].clientX - initialX;
-                            currentY = e.touches[0].clientY - initialY;
-                        } else {
-                            currentX = e.clientX - initialX;
-                            currentY = e.clientY - initialY;
-                        }
-
-                        xOffset = currentX;
-                        yOffset = currentY;
-
-                        setTranslate(currentX, currentY, dragItem);
-                    }
-                }
-
-                function setTranslate(xPos, yPos, el) {
-                    el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
-                }
-
-                // 移除原有的:active伪类控制，通过JS添加类名来控制按压效果，避免拖拽时也触发按压缩小
-                dragItem.addEventListener('touchstart', () => dragItem.classList.add('pressing'), {passive: true});
-                dragItem.addEventListener('touchend', () => dragItem.classList.remove('pressing'));
-                dragItem.addEventListener('mousedown', () => dragItem.classList.add('pressing'));
-                dragItem.addEventListener('mouseup', () => dragItem.classList.remove('pressing'));
-                dragItem.addEventListener('mouseleave', () => dragItem.classList.remove('pressing'));
-
-                // 点击交互
                 const searchSection = dragItem.querySelector('.search-section');
                 const itinerarySection = dragItem.querySelector('.itinerary-section');
                 const searchInput = document.getElementById('destinationInput');
+                
+                let isDragging = false;
+                let startX, startY;
+                let initialLeft, initialTop;
+                let dragClickTime;
 
-                // 阻止输入框的拖拽事件冒泡，允许正常输入
+                // 初始化拖拽
+                function startDrag(e) {
+                    // 阻止默认事件，除了输入框
+                    if (e.target !== searchInput) {
+                        // e.preventDefault(); // 注释掉，否则可能影响点击输入框聚焦
+                    }
+                    
+                    // 如果点击的是输入框，不触发拖拽
+                    if (e.target === searchInput) return;
+
+                    isDragging = false;
+                    dragClickTime = new Date().getTime();
+
+                    const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+                    const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+                    
+                    startX = clientX;
+                    startY = clientY;
+                    
+                    // 锁定当前尺寸和位置，准备拖拽
+                    const rect = dragItem.getBoundingClientRect();
+                    dragItem.style.width = rect.width + 'px';
+                    dragItem.style.height = rect.height + 'px';
+                    // 转换为绝对定位坐标
+                    dragItem.style.left = dragItem.offsetLeft + 'px';
+                    dragItem.style.top = dragItem.offsetTop + 'px';
+                    dragItem.style.right = 'auto'; // 清除 right 属性，防止冲突
+                    
+                    initialLeft = dragItem.offsetLeft;
+                    initialTop = dragItem.offsetTop;
+
+                    // 添加全局监听
+                    if (e.type === 'mousedown') {
+                        document.addEventListener('mousemove', onDrag);
+                        document.addEventListener('mouseup', endDrag);
+                    } else {
+                        document.addEventListener('touchmove', onDrag, { passive: false });
+                        document.addEventListener('touchend', endDrag);
+                    }
+                    
+                    dragItem.classList.add('pressing');
+                }
+
+                // 拖拽过程
+                function onDrag(e) {
+                    const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+                    const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+                    
+                    const deltaX = clientX - startX;
+                    const deltaY = clientY - startY;
+                    
+                    // 移动距离超过阈值才视为拖动
+                    if (!isDragging && (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)) {
+                        isDragging = true;
+                    }
+                    
+                    if (isDragging) {
+                        if (e.cancelable) e.preventDefault(); // 防止滚动
+                        
+                        let newLeft = initialLeft + deltaX;
+                        let newTop = initialTop + deltaY;
+                        
+                        // 边界限制
+                        const container = document.querySelector('.screen-content');
+                        const maxX = container.offsetWidth - dragItem.offsetWidth;
+                        const maxY = container.offsetHeight - dragItem.offsetHeight;
+                        
+                        newLeft = Math.max(0, Math.min(newLeft, maxX));
+                        newTop = Math.max(0, Math.min(newTop, maxY));
+                        
+                        dragItem.style.left = newLeft + 'px';
+                        dragItem.style.top = newTop + 'px';
+                    }
+                }
+
+                // 结束拖拽
+                function endDrag(e) {
+                    document.removeEventListener('mousemove', onDrag);
+                    document.removeEventListener('touchmove', onDrag);
+                    document.removeEventListener('mouseup', endDrag);
+                    document.removeEventListener('touchend', endDrag);
+                    
+                    dragItem.classList.remove('pressing');
+                    
+                    // 如果没有发生拖动（即点击），且在指定区域，触发相应事件
+                    if (!isDragging) {
+                        // 点击事件逻辑由各元素自身的 click/touchend 监听处理
+                        // 这里不需要额外处理，因为没有 e.preventDefault()
+                    } else {
+                        // 拖拽结束后的吸附逻辑 (可选)
+                        // "红色画框部分不发生滑动时，默认贴合上方元素" -> 这里理解为恢复初始状态或吸附顶部
+                        const currentTop = parseInt(dragItem.style.top);
+                        const stickyThreshold = 150; // 吸附阈值
+                        
+                        // 如果拖动位置靠近顶部（即靠近默认位置），则自动吸附回去
+                        if (currentTop < stickyThreshold) {
+                            dragItem.style.transition = 'all 0.3s ease';
+                            dragItem.style.top = '140px'; // 恢复默认高度
+                            dragItem.style.left = '10px'; // 恢复默认左边距
+                            dragItem.style.width = ''; // 恢复自动宽度（配合 right: 10px）
+                            dragItem.style.right = '10px'; // 恢复右边距
+                            
+                            // 动画结束后清除 transition，避免影响下次拖拽
+                            setTimeout(() => {
+                                dragItem.style.transition = 'box-shadow 0.2s, background 0.2s';
+                            }, 300);
+                        }
+                    }
+                }
+
+                dragItem.addEventListener('mousedown', startDrag);
+                dragItem.addEventListener('touchstart', startDrag, { passive: false });
+
+                // 阻止输入框的拖拽事件冒泡
                 searchInput.addEventListener('touchstart', (e) => e.stopPropagation(), {passive: true});
                 searchInput.addEventListener('mousedown', (e) => e.stopPropagation());
                 
@@ -1597,19 +1662,21 @@
                         const keyword = this.value.trim();
                         if (keyword) {
                             searchLocation(keyword);
-                            this.blur(); // 收起键盘
+                            this.blur();
                         }
                     }
                 });
                 
                 // 监听搜索图标点击
                 searchSection.querySelector('svg').addEventListener('click', (e) => {
-                    e.stopPropagation(); // 阻止触发拖拽
-                    const keyword = searchInput.value.trim();
-                    if (keyword) {
-                        searchLocation(keyword);
-                    } else {
-                        searchInput.focus();
+                    // e.stopPropagation(); // 不再阻止，依靠 isDragging 判断
+                    if (!isDragging) {
+                        const keyword = searchInput.value.trim();
+                        if (keyword) {
+                            searchLocation(keyword);
+                        } else {
+                            searchInput.focus();
+                        }
                     }
                 });
 
@@ -1618,7 +1685,6 @@
                     showToast('正在搜索: ' + keyword + '...');
                     
                     // 使用腾讯地图 Place 搜索服务
-                    // 需确保引入了 service 库: &libraries=service
                     if (!TMap.service || !TMap.service.Search) {
                         console.error('TMap.service.Search 未加载');
                         showToast('地图搜索服务初始化失败');
@@ -1698,45 +1764,21 @@
                     });
                 }
 
-                // 区分拖拽和点击
-                let startX, startY;
-                
-                dragItem.addEventListener('touchstart', (e) => {
-                    startX = e.touches[0].clientX;
-                    startY = e.touches[0].clientY;
-                }, {passive: true});
-
-                dragItem.addEventListener('mousedown', (e) => {
-                    startX = e.clientX;
-                    startY = e.clientY;
-                });
-
-                function handleTap(e, callback) {
-                    let endX, endY;
-                    if (e.type === 'touchend') {
-                        endX = e.changedTouches[0].clientX;
-                        endY = e.changedTouches[0].clientY;
-                    } else {
-                        endX = e.clientX;
-                        endY = e.clientY;
-                    }
-
-                    // 如果移动距离很小，认为是点击
-                    if (Math.abs(endX - startX) < 5 && Math.abs(endY - startY) < 5) {
-                        callback();
-                    }
-                }
-
-                searchSection.addEventListener('touchend', (e) => handleTap(e, () => showToast('即将开放：目的地预览功能')));
-                searchSection.addEventListener('click', (e) => {
-                    if(e.pointerType === 'mouse') showToast('即将开放：目的地预览功能');
-                });
-
-                itinerarySection.addEventListener('touchend', (e) => handleTap(e, () => showToast('即将开放：我的行程功能')));
+                // 绑定点击事件
                 itinerarySection.addEventListener('click', (e) => {
-                    if(e.pointerType === 'mouse') showToast('即将开放：我的行程功能');
+                     if (!isDragging) showToast('即将开放：我的行程功能');
                 });
+                
+                searchSection.addEventListener('click', (e) => {
+                    // 只有当点击目标是 search-section 本身（空白处）时才提示
+                    if (!isDragging && e.target === searchSection) {
+                        showToast('即将开放：目的地预览功能');
+                    }
+                });
+
             })();
+
+
 
 
             // 移除 tryIpGeolocation 函数和 handleIpSuccess 函数，彻底禁用网络定位降级
