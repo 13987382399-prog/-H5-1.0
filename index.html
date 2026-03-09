@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>云南剧本游 - v1.1</title>
+    <!-- 版本标识：v1.1.0 (2026-03-09) -->
+    <meta name="app-version" content="1.1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -923,7 +925,7 @@
         /* 目的地预览搜索栏 */
         .destination-search-bar {
             position: absolute;
-            top: 140px; /* 调整初始位置，更贴合上方元素 */
+            top: 160px; /* 初始值，JS加载后会动态调整 */
             left: 10px; /* 减小左边距，使宽度更宽 */
             right: 10px; /* 减小右边距 */
             height: 54px;
@@ -1530,6 +1532,28 @@
             // 立即执行自动定位
             startAutoLocation();
 
+            // 动态设置搜索框初始位置
+            function updateSearchBarPosition() {
+                const searchBar = document.getElementById('dragSearchBar');
+                const recommendBar = document.querySelector('.nearby-recommend');
+                if (searchBar && recommendBar) {
+                    const rect = recommendBar.getBoundingClientRect();
+                    // 默认位置：推荐栏底部 + 10px 间距
+                    // 如果推荐栏还没渲染好（例如 height=0），则使用备用值 160px
+                    const top = rect.height > 50 ? (rect.bottom + 10) : 160;
+                    searchBar.style.top = top + 'px';
+                }
+            }
+            
+            // 页面加载完成后立即调整一次
+            updateSearchBarPosition();
+            // 窗口大小改变时调整（如横竖屏切换）
+            window.addEventListener('resize', updateSearchBarPosition);
+            
+            // 监听推荐内容更新（虽然是水平滚动，高度固定，但以防万一）
+            // 这里简单起见，延时再调整一次，确保 CSS 加载完毕
+            setTimeout(updateSearchBarPosition, 500);
+
             // 目的地预览搜索栏拖拽逻辑 (仿照 AI 按钮效果)
             (function() {
                 const dragItem = document.getElementById('dragSearchBar');
@@ -1629,17 +1653,19 @@
                     // 如果没有发生拖动（即点击），且在指定区域，触发相应事件
                     if (!isDragging) {
                         // 点击事件逻辑由各元素自身的 click/touchend 监听处理
-                        // 这里不需要额外处理，因为没有 e.preventDefault()
                     } else {
                         // 拖拽结束后的吸附逻辑 (可选)
                         // "红色画框部分不发生滑动时，默认贴合上方元素" -> 这里理解为恢复初始状态或吸附顶部
                         const currentTop = parseInt(dragItem.style.top);
-                        const stickyThreshold = 150; // 吸附阈值
-                        
+                        // 动态获取推荐栏高度
+                        const recommendBar = document.querySelector('.nearby-recommend');
+                        const defaultTop = recommendBar.getBoundingClientRect().bottom + 10;
+                        const stickyThreshold = defaultTop + 50; // 吸附阈值
+
                         // 如果拖动位置靠近顶部（即靠近默认位置），则自动吸附回去
                         if (currentTop < stickyThreshold) {
                             dragItem.style.transition = 'all 0.3s ease';
-                            dragItem.style.top = '140px'; // 恢复默认高度
+                            dragItem.style.top = defaultTop + 'px'; // 恢复默认高度
                             dragItem.style.left = '10px'; // 恢复默认左边距
                             dragItem.style.width = ''; // 恢复自动宽度（配合 right: 10px）
                             dragItem.style.right = '10px'; // 恢复右边距
