@@ -1,6 +1,6 @@
 @echo off
 echo ==========================================
-echo       Kunming Guide - Manual Push
+echo       Kunming Guide - Manual Push v1.1.4
 echo ==========================================
 echo.
 echo 1. Checking git status...
@@ -10,7 +10,7 @@ echo 2. Adding all changes...
 git add .
 echo.
 echo 3. Committing changes...
-git commit -m "feat: update button interaction styles and fix server scripts v1.1.3"
+git commit -m "feat: expand nearby recommendations on button click v1.1.4"
 echo.
 echo 4. Pushing to remote (origin master)...
 git push origin master

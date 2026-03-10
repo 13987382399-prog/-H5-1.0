@@ -1,6 +1,6 @@
 @echo off
 echo ==========================================
-echo       Kunming Guide - Fix Push
+echo       Kunming Guide - Fix Push v1.1.5
 echo ==========================================
 echo.
 echo Starting push process... > push_debug.log
@@ -18,7 +18,7 @@ git add . >> push_debug.log 2>&1
 echo.
 echo 3. Committing changes...
 echo 3. Committing changes... >> push_debug.log
-git commit -m "fix: manual push attempt with debug log" >> push_debug.log 2>&1
+git commit -m "feat: bump version to 1.1.5 and re-push" >> push_debug.log 2>&1
 
 echo.
 echo 4. Pushing to remote (origin master)...
