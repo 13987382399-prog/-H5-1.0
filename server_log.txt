@@ -1,0 +1,13 @@
+Server running at http://localhost:3000/
+Request for /
+Request for /%E5%BF%AB%E9%97%AA%E6%B4%BB%E5%8A%A8.png
+Request for /%E7%83%AD%E9%97%A8%E5%89%A7%E6%9C%AC.png
+Request for /%E9%9D%9E%E9%81%97%E6%89%8B%E5%B7%A5.png
+Request for /%E6%89%93%E8%B7%B3%E8%81%9A%E7%82%B9.png
+Request for /%E4%B8%80%E9%94%AE%E9%A2%84%E7%BA%A6.png
+Request for /%E6%88%91%E7%9A%84%E8%AE%BE%E7%BD%AE.png
+Request for /20260219-202331.gif
+Request for /@vite/client
+Request for /location_icon.png
+Request for /location_icon.png
+^C
