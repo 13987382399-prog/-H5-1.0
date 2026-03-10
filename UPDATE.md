@@ -6,75 +6,32 @@
 
 在你的本地电脑上（不是服务器上），直接复制以下命令并运行（假设你已经配置了 SSH 密钥）：
 
+### 强制更新（覆盖服务器修改）
+```bash
+ssh root@8.137.59.55 "cd /var/www/kunming-guide && git fetch --all && git reset --hard origin/master && npm install && pm2 restart kunming-guide"
+```
+
+### 普通更新（保留服务器修改）
 ```bash
 ssh root@8.137.59.55 "cd /var/www/kunming-guide && git pull && npm install && pm2 restart kunming-guide"
 ```
 
-如果需要输入密码，请按提示输入服务器 root 密码。
+## 核弹级重置（Nuclear Reset）
 
-## 方法一：使用自动部署脚本（需登录服务器）
+如果遇到**代码死活不更新**、**PM2 报错**或者**服务器环境异常**的情况，请直接运行以下脚本进行全量重置：
 
-如果你的服务器上已经保留了 `setup.sh`，直接再次运行它即可自动更新。
+**Windows 用户:**
+双击运行 `nuclear_reset.bat`
 
-1.  **登录服务器**
-    ```bash
-    ssh root@8.137.59.55
-    ```
-
-2.  **运行脚本**
-    ```bash
-    # 如果脚本就在当前目录下
-    ./setup.sh
-
-    # 或者重新下载并运行（确保是最新脚本）
-    curl -O https://raw.githubusercontent.com/13987382399-prog/-H5-1.0/master/setup.sh && chmod +x setup.sh && ./setup.sh
-    ```
-
-## 方法二：手动更新（更可控）
-
-如果你只想更新代码而不想重新配置环境，请按以下步骤操作：
-
-1.  **登录服务器**
-    ```bash
-    ssh root@8.137.59.55
-    ```
-
-2.  **进入项目目录**
-    ```bash
-    cd /var/www/kunming-guide
-    ```
-
-3.  **拉取最新代码**
-    *注意：如果遇到 `Permission denied` 错误，请在命令前加 `sudo`*
-    ```bash
-    git pull origin master
-    ```
-
-4.  **更新依赖（如果有新依赖）**
-    ```bash
-    npm install
-    ```
-
-5.  **重启服务**
-    ```bash
-    pm2 restart kunming-guide
-    ```
-
-## 常见问题处理
-
-### 1. 权限错误 (Permission denied)
-如果在 `git pull` 时遇到权限错误，尝试修复目录权限：
+**Mac/Linux 用户:**
 ```bash
-sudo chown -R root:root /var/www/kunming-guide
-```
-或者使用 sudo 运行 git：
-```bash
-sudo git pull
+ssh root@8.137.59.55 "rm -rf /var/www/kunming-guide && git clone https://github.com/13987382399-prog/-H5-1.0.git /var/www/kunming-guide && cd /var/www/kunming-guide && npm install && pm2 delete all && pm2 start server.js --name kunming-guide && pm2 save"
 ```
 
-### 2. 本地修改冲突
-如果服务器上也有修改导致冲突，可以强制重置（慎用，会丢失服务器上的修改）：
-```bash
-git fetch --all
-git reset --hard origin/master
-```
+此操作会：
+1. **删除**服务器上的现有项目文件夹。
+2. **重新克隆**最新的代码仓库。
+3. **重新安装**所有依赖。
+4. **重启** PM2 服务。
+
+注意：如果你在服务器上手动修改了 `.env` 文件，脚本会尝试备份并恢复它，但建议确认无误后再执行。
