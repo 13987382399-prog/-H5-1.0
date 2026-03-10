@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>云南剧本游 - v1.1</title>
-    <!-- 版本标识：v1.1.1 (2026-03-10) -->
-    <meta name="app-version" content="1.1.1">
+    <!-- 版本标识：v1.1.2 (2026-03-10) -->
+    <meta name="app-version" content="1.1.2">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -995,21 +995,53 @@
             width: 1px;
             height: 24px;
             background-color: #e2e8f0;
-            margin: 0 8px;
+            margin: 0 4px;
         }
 
         .itinerary-section {
             display: flex;
             align-items: center;
-            height: 100%;
-            padding-right: 16px;
-            padding-left: 8px;
+            justify-content: center;
+            height: 44px; /* 适配高度 (54px容器-10px间距) */
+            padding: 0 14px 0 12px;
+            margin-left: 2px;
+            /* 左侧较直(贴合分割线)，右侧圆润(贴合容器边框) */
+            border-radius: 8px 24px 24px 8px;
             cursor: pointer;
             position: relative;
+            transition: all 0.15s ease-out;
+            
+            /* 复用 func-btn 样式 */
+            background: linear-gradient(180deg, #FFFFFF 0%, #F0F7FF 100%);
+            border: 1px solid #E0F2FE;
+            box-shadow: 
+                0 4px 6px -1px rgba(20, 182, 250, 0.1), 
+                0 10px 15px -3px rgba(20, 182, 250, 0.1), 
+                inset 0 -3px 0 rgba(20, 182, 250, 0.1), 
+                inset 0 0 0 1px rgba(255,255,255,0.6);
+        }
+        
+        .itinerary-section:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(180deg, #FFFFFF 0%, #E0F2FE 100%);
+            box-shadow: 
+                0 8px 15px -2px rgba(20, 182, 250, 0.15),
+                0 15px 25px -5px rgba(20, 182, 250, 0.15),
+                inset 0 -3px 0 rgba(20, 182, 250, 0.15),
+                inset 0 0 0 1px rgba(255,255,255,0.8);
         }
         
         .itinerary-section:active {
-            opacity: 0.7;
+            transform: translateY(1px);
+            background: #F0F9FF;
+            box-shadow: 
+                0 2px 4px -1px rgba(20, 182, 250, 0.1),
+                inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            opacity: 1;
+        }
+
+        .itinerary-section:hover .itinerary-text {
+            color: #14b6fa;
         }
 
         .itinerary-text {
@@ -1017,6 +1049,9 @@
             color: #334155;
             font-weight: 600;
             white-space: nowrap;
+            transition: color 0.15s;
+            line-height: 1.2; /* 优化行高以垂直居中 */
+            padding-top: 1px; /* 微调视觉中心 */
         }
 
     </style>
@@ -1071,7 +1106,7 @@
                 
                 <div class="itinerary-section">
                     <!-- 蓝色日历图标 + 绿色对勾 -->
-                    <div style="position: relative; width: 26px; height: 26px; margin-right: 8px;">
+                    <div style="position: relative; width: 26px; height: 26px; margin-right: 8px; display: flex; align-items: center; justify-content: center;">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6ad4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                             <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -1538,9 +1573,9 @@
                 const recommendBar = document.querySelector('.nearby-recommend');
                 if (searchBar && recommendBar) {
                     const rect = recommendBar.getBoundingClientRect();
-                    // 默认位置：推荐栏底部 + 10px 间距
+                    // 默认位置：推荐栏底部 + 0px 间距 (贴合)
                     // 如果推荐栏还没渲染好（例如 height=0），则使用备用值 160px
-                    const top = rect.height > 50 ? (rect.bottom + 10) : 160;
+                    const top = rect.height > 50 ? (rect.bottom + 0) : 160;
                     searchBar.style.top = top + 'px';
                 }
             }
