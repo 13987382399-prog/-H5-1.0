@@ -19,3 +19,4 @@ echo ==========================================
 echo Done! Please check the output above for any errors.
 echo If push failed, you might need to pull first or check your network.
 echo ==========================================
+pause
